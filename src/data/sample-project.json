@@ -1,0 +1,90 @@
+{
+  "id": "hello-hub-lite",
+  "name": "Hello Hub Lite sample",
+  "country": "Uganda",
+  "currency": "USD",
+  "systemVoltage": 24,
+  "sunHours": 4.8,
+  "autonomyDays": 1.5,
+  "brandProfileId": "project-hello-world",
+  "updatedAt": "2026-05-19T00:00:00.000Z",
+  "loads": [
+    {
+      "id": "load-router",
+      "name": "Core router",
+      "quantity": 1,
+      "watts": 18,
+      "hoursPerDay": 24,
+      "currentType": "DC",
+      "voltage": 24,
+      "surgeMultiplier": 1.2,
+      "critical": true
+    },
+    {
+      "id": "load-ap",
+      "name": "Outdoor access point",
+      "quantity": 3,
+      "watts": 12,
+      "hoursPerDay": 24,
+      "currentType": "DC",
+      "voltage": 24,
+      "surgeMultiplier": 1.2,
+      "critical": true
+    },
+    {
+      "id": "load-tablets",
+      "name": "Learning tablets",
+      "quantity": 10,
+      "watts": 8,
+      "hoursPerDay": 3,
+      "currentType": "DC",
+      "voltage": 5,
+      "surgeMultiplier": 1,
+      "critical": false
+    },
+    {
+      "id": "load-lights",
+      "name": "LED lights",
+      "quantity": 6,
+      "watts": 5,
+      "hoursPerDay": 5,
+      "currentType": "DC",
+      "voltage": 12,
+      "surgeMultiplier": 1.1,
+      "critical": true
+    },
+    {
+      "id": "load-usb",
+      "name": "USB charging station",
+      "quantity": 1,
+      "watts": 60,
+      "hoursPerDay": 4,
+      "currentType": "DC",
+      "voltage": 12,
+      "surgeMultiplier": 1.1,
+      "critical": false
+    },
+    {
+      "id": "load-monitor",
+      "name": "Monitoring gateway",
+      "quantity": 1,
+      "watts": 8,
+      "hoursPerDay": 24,
+      "currentType": "DC",
+      "voltage": 12,
+      "surgeMultiplier": 1.2,
+      "critical": true
+    },
+    {
+      "id": "load-laptop",
+      "name": "Technician laptop charging",
+      "quantity": 1,
+      "watts": 65,
+      "hoursPerDay": 2,
+      "currentType": "AC",
+      "voltage": 230,
+      "surgeMultiplier": 1.5,
+      "critical": false
+    }
+  ]
+}

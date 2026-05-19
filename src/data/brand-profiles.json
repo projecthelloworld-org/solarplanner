@@ -1,0 +1,26 @@
+[
+  {
+    "id": "project-hello-world",
+    "name": "Project Hello World",
+    "tagline": "Community-powered connectivity planning",
+    "primaryColor": "#1f6f68",
+    "accentColor": "#f0b429",
+    "reportFooter": "Prepared for Project Hello World community connectivity planning."
+  },
+  {
+    "id": "community-network",
+    "name": "Community Network Partner",
+    "tagline": "Practical power estimates for local network teams",
+    "primaryColor": "#315f8c",
+    "accentColor": "#55a06a",
+    "reportFooter": "Prepared for community network partner review and local adaptation."
+  },
+  {
+    "id": "field-technician",
+    "name": "Field Technician Draft",
+    "tagline": "Site-first solar planning notes",
+    "primaryColor": "#7a4f1d",
+    "accentColor": "#3f8f8a",
+    "reportFooter": "Draft estimate for technician review before installation."
+  }
+]

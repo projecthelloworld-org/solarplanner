@@ -1,0 +1,14 @@
+{
+  "dcDistributionEfficiency": 0.94,
+  "hybridDcEfficiency": 0.94,
+  "inverterEfficiency": 0.88,
+  "batteryDepthOfDischarge": 0.8,
+  "batteryReserveFactor": 1.15,
+  "arrayDerateFactor": 0.75,
+  "mpptSafetyFactor": 1.25,
+  "inverterHeadroomFactor": 1.25,
+  "installationRate": 0.16,
+  "contingencyRate": 0.1,
+  "currencyExchangeNotes": "Prices are editable planning assumptions and should be localized before procurement.",
+  "safetyDisclaimer": "This report is for planning estimates only, not certified electrical design. Final installation must be reviewed by a qualified solar/electrical technician and comply with local electrical, structural, grounding, and lightning protection requirements."
+}

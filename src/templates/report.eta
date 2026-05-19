@@ -1,0 +1,226 @@
+<article class="report-document">
+  <header class="report-header" style="--brand: <%= it.brand.primaryColor %>; --accent: <%= it.brand.accentColor %>">
+    <div>
+      <p><%= it.brand.name %></p>
+      <h1><%= it.project.name %></h1>
+      <span><%= it.brand.tagline %></span>
+    </div>
+    <div class="report-meta">
+      <strong>Hello Solar Planner</strong>
+      <span>Planning estimate</span>
+      <span><%= it.generatedAt %></span>
+    </div>
+  </header>
+
+  <section class="report-section report-brief">
+    <h2>Executive Summary</h2>
+    <div class="summary-band">
+      <p><strong>Total daily energy</strong><span><%= it.formatEnergy(it.result.totalDailyWh) %></span></p>
+      <p><strong>Peak load</strong><span><%= it.formatNumber(it.result.peakLoadW) %> W</span></p>
+      <p><strong>Surge load</strong><span><%= it.formatNumber(it.result.surgeLoadW) %> W</span></p>
+      <p><strong>Critical energy</strong><span><%= it.formatEnergy(it.result.criticalDailyWh) %></span></p>
+    </div>
+    <p class="report-note">
+      This estimate compares a fully DC system with a hybrid DC + AC system for community connectivity loads.
+    </p>
+  </section>
+
+  <section class="report-section">
+    <h2>Project Summary</h2>
+    <div class="report-grid">
+      <p><strong>Country</strong><span><%= it.project.country %></span></p>
+      <p><strong>Currency</strong><span><%= it.project.currency %></span></p>
+      <p><strong>System voltage</strong><span><%= it.project.systemVoltage %> V</span></p>
+      <p><strong>Sun hours</strong><span><%= it.project.sunHours %> h/day</span></p>
+      <p><strong>Autonomy</strong><span><%= it.project.autonomyDays %> day(s)</span></p>
+      <p><strong>Brand profile</strong><span><%= it.brand.name %></span></p>
+    </div>
+  </section>
+
+  <section class="report-section">
+    <h2>Load Table</h2>
+    <table class="report-table compact-table">
+      <thead>
+        <tr>
+          <th>Load</th>
+          <th>Qty</th>
+          <th>W each</th>
+          <th>h/day</th>
+          <th>Type</th>
+          <th>Voltage</th>
+          <th>Surge</th>
+          <th>Critical</th>
+          <th>Daily Wh</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% it.result.loadRows.forEach((row) => { %>
+          <tr>
+            <td><%= row.load.name %></td>
+            <td><%= row.load.quantity %></td>
+            <td><%= it.formatNumber(row.load.watts) %></td>
+            <td><%= row.load.hoursPerDay %></td>
+            <td><%= row.load.currentType %></td>
+            <td><%= row.load.voltage %> V</td>
+            <td><%= row.load.surgeMultiplier %>x</td>
+            <td><%= row.load.critical ? "Yes" : "No" %></td>
+            <td><%= it.formatNumber(row.dailyWh) %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="8">Total daily energy</td>
+          <td><%= it.formatNumber(it.result.totalDailyWh) %> Wh</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+
+  <section class="report-section">
+    <h2>Technical Sizing Summary</h2>
+    <table class="report-table">
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th>Fully DC system</th>
+          <th>Hybrid DC + AC system</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Adjusted daily energy</td>
+          <td><%= it.formatEnergy(it.result.dc.adjustedDailyWh) %></td>
+          <td><%= it.formatEnergy(it.result.hybrid.adjustedDailyWh) %></td>
+        </tr>
+        <tr>
+          <td>Required LiFePO4 battery</td>
+          <td><%= it.formatEnergy(it.result.dc.requiredBatteryWh) %></td>
+          <td><%= it.formatEnergy(it.result.hybrid.requiredBatteryWh) %></td>
+        </tr>
+        <tr>
+          <td>Recommended solar array</td>
+          <td><%= it.formatNumber(it.result.dc.recommendedSolarArrayW) %> W</td>
+          <td><%= it.formatNumber(it.result.hybrid.recommendedSolarArrayW) %> W</td>
+        </tr>
+        <tr>
+          <td>Recommended MPPT current</td>
+          <td><%= it.result.dc.recommendedMpptCurrentA %> A</td>
+          <td><%= it.result.hybrid.recommendedMpptCurrentA %> A</td>
+        </tr>
+        <tr>
+          <td>Recommended inverter size</td>
+          <td>Not required</td>
+          <td><%= it.formatNumber(it.result.hybrid.recommendedInverterW) %> W</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <% it.recommendations.forEach((option) => { %>
+    <section class="report-section option-section">
+      <h2><%= option.name %></h2>
+      <p class="section-intro"><%= option.summary %></p>
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Recommendation</th>
+            <th>Rationale</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% option.lines.forEach((line) => { %>
+            <tr>
+              <td><%= line.category %></td>
+              <td><%= line.recommendation %></td>
+              <td><%= line.rationale %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </section>
+  <% }) %>
+
+  <section class="report-section financial-section">
+    <h2>Financial Summary</h2>
+    <div class="total-strip">
+      <% it.costs.forEach((estimate) => { %>
+        <p>
+          <strong><%= estimate.systemId === "dc" ? "Fully DC option" : "Hybrid DC + AC option" %></strong>
+          <span><%= it.money(estimate.total) %></span>
+        </p>
+      <% }) %>
+    </div>
+
+    <% it.costs.forEach((estimate) => { %>
+      <div class="cost-block">
+        <h3><%= estimate.systemId === "dc" ? "Fully DC Cost Detail" : "Hybrid DC + AC Cost Detail" %></h3>
+        <table class="report-table compact-table">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Description</th>
+              <th>Qty</th>
+              <th>Unit cost</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% estimate.lines.forEach((line) => { %>
+              <tr>
+                <td><%= line.category %></td>
+                <td><%= line.description %></td>
+                <td><%= line.quantity %></td>
+                <td><%= it.money(line.unitCost) %></td>
+                <td><%= it.money(line.total) %></td>
+              </tr>
+            <% }) %>
+            <tr>
+              <td>Installation</td>
+              <td>Planning allowance based on editable assumption</td>
+              <td>1</td>
+              <td><%= it.formatPercent(it.assumptions.installationRate) %></td>
+              <td><%= it.money(estimate.installation) %></td>
+            </tr>
+            <tr>
+              <td>Contingency</td>
+              <td>Planning allowance for local variance and missing items</td>
+              <td>1</td>
+              <td><%= it.formatPercent(it.assumptions.contingencyRate) %></td>
+              <td><%= it.money(estimate.contingency) %></td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="4">Estimated total</td>
+              <td><%= it.money(estimate.total) %></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    <% }) %>
+  </section>
+
+  <section class="report-section">
+    <h2>Assumptions</h2>
+    <div class="assumption-list">
+      <p><strong>DC distribution efficiency</strong><span><%= it.formatPercent(it.assumptions.dcDistributionEfficiency) %></span></p>
+      <p><strong>Hybrid DC efficiency</strong><span><%= it.formatPercent(it.assumptions.hybridDcEfficiency) %></span></p>
+      <p><strong>Inverter efficiency</strong><span><%= it.formatPercent(it.assumptions.inverterEfficiency) %></span></p>
+      <p><strong>Battery depth of discharge</strong><span><%= it.formatPercent(it.assumptions.batteryDepthOfDischarge) %></span></p>
+      <p><strong>Battery reserve factor</strong><span><%= it.formatPercent(it.assumptions.batteryReserveFactor) %></span></p>
+      <p><strong>PV derate factor</strong><span><%= it.formatPercent(it.assumptions.arrayDerateFactor) %></span></p>
+      <p><strong>MPPT safety factor</strong><span><%= it.formatPercent(it.assumptions.mpptSafetyFactor) %></span></p>
+      <p><strong>Inverter headroom factor</strong><span><%= it.formatPercent(it.assumptions.inverterHeadroomFactor) %></span></p>
+    </div>
+    <p class="report-note"><%= it.assumptions.currencyExchangeNotes %></p>
+  </section>
+
+  <section class="report-section disclaimer">
+    <h2>Safety Disclaimer</h2>
+    <p><%= it.assumptions.safetyDisclaimer %></p>
+  </section>
+
+  <footer><%= it.brand.reportFooter %></footer>
+</article>
