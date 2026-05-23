@@ -1,5 +1,6 @@
 import { Eta } from "eta";
 import "./styles.css";
+import solarPlannerLogoUrl from "./assets/solar_planner_logo.svg";
 import assumptionsData from "./data/assumptions.json";
 import brandProfilesData from "./data/brand-profiles.json";
 import productsData from "./data/default-products.json";
@@ -164,6 +165,7 @@ function loadState(): AppState {
 }
 
 let state = loadState();
+let reportVisible = false;
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -202,6 +204,29 @@ function formatEnergy(wh: number) {
 
 function formatStatus(evaluation: EquipmentEvaluation) {
   return `<span class="status-pill ${evaluation.status === "Pass" ? "pass" : "warn"}">${evaluation.status}</span>`;
+}
+
+const iconPaths: Record<string, string> = {
+  energy: `<path d="M13 2 5 14h7l-1 8 8-12h-7l1-8Z" />`,
+  peak: `<path d="M4 18h16" /><path d="M6 16l4-7 4 4 4-7" />`,
+  surge: `<path d="M13 2 4 14h7l-1 8 10-14h-7l1-6Z" />`,
+  critical: `<rect x="7" y="4" width="10" height="16" rx="2" /><path d="M10 8h4" /><path d="M12 17h.01" />`,
+  currency: `<circle cx="12" cy="12" r="8" /><path d="M12 8v8" /><path d="M9.5 10.25c.5-1.2 4.4-1.3 4.9.2.5 1.6-4.5 1.4-4.2 3.1.3 1.7 4.2 1.5 4.8.2" />`,
+  solar: `<path d="M3 16h18" /><path d="M6 16l3-7h6l3 7" /><path d="M8 12h8" /><path d="M12 9v7" /><path d="M12 2v3" /><path d="M4.9 5.9l2.1 2.1" /><path d="M19.1 5.9 17 8" />`,
+  battery: `<rect x="4" y="7" width="15" height="10" rx="2" /><path d="M19 10h1.5v4H19" /><path d="M8 11v2" /><path d="M11 11v2" /><path d="M14 11v2" />`,
+  controller: `<rect x="5" y="4" width="14" height="16" rx="2" /><path d="M9 8h6" /><path d="M9 12h.01" /><path d="M12 12h.01" /><path d="M15 12h.01" /><path d="M9 16h6" />`,
+  inverter: `<rect x="4" y="5" width="16" height="14" rx="2" /><path d="M8 10h8" /><path d="M8 14h2" /><path d="M14 14h2" /><path d="M12 5v14" />`,
+  dcDist: `<path d="M12 3v18" /><path d="M5 8h14" /><path d="M5 16h14" /><circle cx="5" cy="8" r="2" /><circle cx="19" cy="8" r="2" /><circle cx="5" cy="16" r="2" /><circle cx="19" cy="16" r="2" />`,
+  acDist: `<path d="M4 12h5l3-7 3 14 3-7h2" />`,
+  cabling: `<path d="M7 7c-3 3-3 7 0 10s7 3 10 0" /><path d="M17 7c3 3 3 7 0 10s-7 3-10 0" /><path d="M9 9l6 6" />`,
+  earthing: `<path d="M12 3v11" /><path d="M8 14h8" /><path d="M9 17h6" /><path d="M10 20h4" />`,
+  monitoring: `<rect x="4" y="5" width="16" height="12" rx="2" /><path d="M8 21h8" /><path d="M12 17v4" /><path d="M8 12l2 2 3-5 3 3" />`,
+  settings: `<path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z" /><path d="M4 12h2" /><path d="M18 12h2" /><path d="M12 4v2" /><path d="M12 18v2" /><path d="m6.3 6.3 1.4 1.4" /><path d="m16.3 16.3 1.4 1.4" /><path d="m17.7 6.3-1.4 1.4" /><path d="m7.7 16.3-1.4 1.4" />`,
+};
+
+function icon(name: string) {
+  const paths = iconPaths[name] ?? iconPaths.settings;
+  return `<span class="ui-icon" aria-hidden="true"><svg viewBox="0 0 24 24" role="img">${paths}</svg></span>`;
 }
 
 function getProjectBundle(project: Project) {
@@ -417,13 +442,6 @@ function renderProjectPanel(project: Project) {
             <option value="hybrid" ${selectedSystemFor(project) === "hybrid" ? "selected" : ""}>Hybrid DC + AC</option>
           </select>
         </label>
-        <label>
-          <span>Brand profile</span>
-          <select data-project-field="brandProfileId">
-            ${brands.map((item) => `<option value="${item.id}" ${item.id === project.brandProfileId ? "selected" : ""}>${item.name}</option>`).join("")}
-          </select>
-          <em>Report branding only</em>
-        </label>
       </div>
     </section>
   `;
@@ -444,7 +462,11 @@ function renderLoadRows(project: Project) {
     .map(
       (load) => `
       <tr data-load-row data-load-id="${load.id}">
-        <td><input aria-label="Load name" data-load-id="${load.id}" data-load-field="name" value="${load.name}" /></td>
+        <td>
+          <div class="load-name-cell">
+            <input aria-label="Load name" data-load-id="${load.id}" data-load-field="name" value="${load.name}" />
+          </div>
+        </td>
         <td><input aria-label="Quantity" type="number" min="0" step="1" data-load-id="${load.id}" data-load-field="quantity" value="${load.quantity}" /></td>
         <td><input aria-label="Watts" type="number" min="0" step="1" data-load-id="${load.id}" data-load-field="watts" value="${load.watts}" /></td>
         <td><input aria-label="Hours per day" type="number" min="0" step="0.25" data-load-id="${load.id}" data-load-field="hoursPerDay" value="${load.hoursPerDay}" /></td>
@@ -459,10 +481,9 @@ function renderLoadRows(project: Project) {
         <td>
           <label class="check-cell">
             <input type="checkbox" data-load-id="${load.id}" data-load-field="critical" ${load.critical ? "checked" : ""} />
-            <span>Critical</span>
           </label>
         </td>
-        <td><button class="icon-button" type="button" data-remove-load="${load.id}" aria-label="Remove ${load.name}">x</button></td>
+        <td><button class="icon-button delete-button" type="button" data-remove-load="${load.id}" aria-label="Remove ${load.name}">×</button></td>
       </tr>
     `,
     )
@@ -475,6 +496,21 @@ function hardwareInput(label: string, section: string, field: string, value: num
 
 function priceInput(label: string, field: keyof PricingSettings, value: number) {
   return numberField(label, `type="number" min="0" step="0.01" data-pricing-field="${field}"`, value, "USD unit price");
+}
+
+function accordionSummary(title: string, summary: string, amount = "", iconLabel = "settings") {
+  return `
+    <summary>
+      <span class="accordion-title">
+        ${icon(iconLabel)}
+        <span>
+          <strong>${title}</strong>
+          <em>${summary}</em>
+        </span>
+      </span>
+      ${amount ? `<span class="accordion-amount">${amount}</span>` : ""}
+    </summary>
+  `;
 }
 
 function renderSideControls(project: Project, plan: EquipmentPlan, evaluations: { dc: EquipmentEvaluation; hybrid: EquipmentEvaluation }, generatedPlan: EquipmentPlan) {
@@ -490,7 +526,7 @@ function renderSideControls(project: Project, plan: EquipmentPlan, evaluations: 
 
       <div class="accordion-list">
         <details>
-          <summary>Currency</summary>
+          ${accordionSummary("Currency", `1 USD in ${project.currency}`, `${project.currency}`, "currency")}
           <div class="accordion-body mini-grid">
             <label>
               <span>Currency</span>
@@ -503,7 +539,7 @@ function renderSideControls(project: Project, plan: EquipmentPlan, evaluations: 
         </details>
 
         <details open>
-          <summary>Solar Panels</summary>
+          ${accordionSummary("Solar Panels", `${plan.shared.panelCount} panels x ${plan.shared.panelWatts} W`, moneyUsd(project.pricing.panelUnitUsd), "solar")}
           <div class="accordion-body mini-grid">
             ${hardwareInput("Panels", "shared", "panelCount", plan.shared.panelCount)}
             ${hardwareInput("Watts each", "shared", "panelWatts", plan.shared.panelWatts)}
@@ -513,7 +549,7 @@ function renderSideControls(project: Project, plan: EquipmentPlan, evaluations: 
         </details>
 
         <details>
-          <summary>Batteries</summary>
+          ${accordionSummary("Batteries", `${plan.shared.batteryCount} batteries x ${plan.shared.batteryVoltage} V ${plan.shared.batteryAh} Ah`, moneyUsd(project.pricing.batteryUnitUsd), "battery")}
           <div class="accordion-body mini-grid">
             ${hardwareInput("Batteries", "shared", "batteryCount", plan.shared.batteryCount)}
             ${hardwareInput("Voltage", "shared", "batteryVoltage", plan.shared.batteryVoltage)}
@@ -524,7 +560,7 @@ function renderSideControls(project: Project, plan: EquipmentPlan, evaluations: 
         </details>
 
         <details>
-          <summary>DC Controller</summary>
+          ${accordionSummary("DC Controller", `${plan.dc.controllerCount} controller, ${plan.dc.mpptAmps} A`, moneyUsd(project.pricing.controllerUnitUsd), "controller")}
           <div class="accordion-body mini-grid">
             ${hardwareInput("Controllers", "dc", "controllerCount", plan.dc.controllerCount)}
             ${hardwareInput("MPPT amps", "dc", "mpptAmps", plan.dc.mpptAmps)}
@@ -534,7 +570,7 @@ function renderSideControls(project: Project, plan: EquipmentPlan, evaluations: 
         </details>
 
         <details>
-          <summary>Hybrid Inverter</summary>
+          ${accordionSummary("Hybrid Inverter", `${plan.hybrid.inverterCount} inverter, ${plan.hybrid.inverterWatts} W`, moneyUsd(project.pricing.inverterUnitUsd), "inverter")}
           <div class="accordion-body mini-grid">
             ${hardwareInput("Controllers", "hybrid", "controllerCount", plan.hybrid.controllerCount)}
             ${hardwareInput("MPPT amps", "hybrid", "mpptAmps", plan.hybrid.mpptAmps)}
@@ -546,7 +582,7 @@ function renderSideControls(project: Project, plan: EquipmentPlan, evaluations: 
         </details>
 
         <details>
-          <summary>DC Distribution</summary>
+          ${accordionSummary("DC Distribution", `${plan.balance.dcDistributionCount} set`, moneyUsd(project.pricing.dcDistributionUnitUsd), "dcDist")}
           <div class="accordion-body mini-grid">
             ${hardwareInput("Quantity", "balance", "dcDistributionCount", plan.balance.dcDistributionCount)}
             ${priceInput("Price per set", "dcDistributionUnitUsd", project.pricing.dcDistributionUnitUsd)}
@@ -554,7 +590,7 @@ function renderSideControls(project: Project, plan: EquipmentPlan, evaluations: 
         </details>
 
         <details>
-          <summary>AC Distribution</summary>
+          ${accordionSummary("AC Distribution", `${plan.balance.acDistributionCount} set`, moneyUsd(project.pricing.acDistributionUnitUsd), "acDist")}
           <div class="accordion-body mini-grid">
             ${hardwareInput("Quantity", "balance", "acDistributionCount", plan.balance.acDistributionCount)}
             ${priceInput("Price per set", "acDistributionUnitUsd", project.pricing.acDistributionUnitUsd)}
@@ -562,7 +598,7 @@ function renderSideControls(project: Project, plan: EquipmentPlan, evaluations: 
         </details>
 
         <details>
-          <summary>Cabling</summary>
+          ${accordionSummary("Cabling", `${plan.balance.cablingCount} kit`, moneyUsd(project.pricing.cablingUnitUsd), "cabling")}
           <div class="accordion-body mini-grid">
             ${hardwareInput("Quantity", "balance", "cablingCount", plan.balance.cablingCount)}
             ${priceInput("Price per kit", "cablingUnitUsd", project.pricing.cablingUnitUsd)}
@@ -570,7 +606,7 @@ function renderSideControls(project: Project, plan: EquipmentPlan, evaluations: 
         </details>
 
         <details>
-          <summary>Earthing</summary>
+          ${accordionSummary("Earthing", `${plan.balance.earthingCount} kit`, moneyUsd(project.pricing.earthingUnitUsd), "earthing")}
           <div class="accordion-body mini-grid">
             ${hardwareInput("Quantity", "balance", "earthingCount", plan.balance.earthingCount)}
             ${priceInput("Price per kit", "earthingUnitUsd", project.pricing.earthingUnitUsd)}
@@ -578,7 +614,7 @@ function renderSideControls(project: Project, plan: EquipmentPlan, evaluations: 
         </details>
 
         <details>
-          <summary>Monitoring</summary>
+          ${accordionSummary("Monitoring", `${plan.balance.monitoringCount} kit`, moneyUsd(project.pricing.monitoringUnitUsd), "monitoring")}
           <div class="accordion-body mini-grid">
             ${hardwareInput("Quantity", "balance", "monitoringCount", plan.balance.monitoringCount)}
             ${priceInput("Price per kit", "monitoringUnitUsd", project.pricing.monitoringUnitUsd)}
@@ -586,7 +622,7 @@ function renderSideControls(project: Project, plan: EquipmentPlan, evaluations: 
         </details>
 
         <details>
-          <summary>Sizing Assumptions</summary>
+          ${accordionSummary("Sizing Assumptions", "View all assumptions", "", "settings")}
           <div class="accordion-body mini-grid">
             ${numberField("Default panel W", 'type="number" min="1" step="1" data-default-field="panelWatts"', project.equipmentDefaults.panelWatts)}
             ${numberField("Default battery V", 'type="number" min="1" step="1" data-default-field="batteryVoltage"', project.equipmentDefaults.batteryVoltage)}
@@ -638,10 +674,10 @@ function renderPlanner(project: Project) {
 
       <div class="main-column">
         <section class="panel metrics-panel">
-          <div class="metric"><span>Total daily Wh</span><strong>${formatEnergy(result.totalDailyWh)}</strong></div>
-          <div class="metric"><span>Peak load</span><strong>${integerFormat.format(result.peakLoadW)} W</strong></div>
-          <div class="metric"><span>Surge load</span><strong>${integerFormat.format(result.surgeLoadW)} W</strong></div>
-          <div class="metric"><span>Critical load energy</span><strong>${formatEnergy(result.criticalDailyWh)}</strong></div>
+          <div class="metric">${icon("energy")}<span>Total daily energy</span><strong>${formatEnergy(result.totalDailyWh)}</strong><em>${integerFormat.format(result.totalDailyWh)} Wh</em></div>
+          <div class="metric">${icon("peak")}<span>Peak load</span><strong>${integerFormat.format(result.peakLoadW)} W</strong></div>
+          <div class="metric">${icon("surge")}<span>Surge load</span><strong>${integerFormat.format(result.surgeLoadW)} W</strong></div>
+          <div class="metric">${icon("critical")}<span>Critical load energy</span><strong>${formatEnergy(result.criticalDailyWh)}</strong><em>${integerFormat.format(result.criticalDailyWh)} Wh</em></div>
         </section>
 
         <section class="panel loads-panel">
@@ -661,11 +697,11 @@ function renderPlanner(project: Project) {
                 <tr>
                   <th>Name</th>
                   <th>Qty</th>
-                  <th>W</th>
-                  <th>h/day</th>
+                  <th>Watts (W)</th>
+                  <th>Hours / Day</th>
                   <th>Type</th>
-                  <th>V</th>
-                  <th>Surge</th>
+                  <th>Voltage (V)</th>
+                  <th>Surge (x)</th>
                   <th>Critical</th>
                   <th></th>
                 </tr>
@@ -715,19 +751,15 @@ function renderPlanner(project: Project) {
       </div>
     </main>
 
-    <section class="panel report-panel">
-      <details class="report-details" data-report-details>
-        <summary class="report-summary">
-          <div class="section-heading">
-            <span>Report generation</span>
-            <strong>${systemOptionName(selectedSystem)} report</strong>
-          </div>
-        </summary>
+    <section class="panel report-panel ${reportVisible ? "report-panel-ready" : "report-panel-gate"}">
+      ${
+        reportVisible
+          ? `
         <div class="report-body">
           <div class="panel-title-row report-toolbar">
             <div class="section-heading">
-              <span>Report actions</span>
-              <strong>Print or export this selected option</strong>
+              <span>Report generation</span>
+              <strong>${systemOptionName(selectedSystem)} report</strong>
             </div>
             <div class="report-actions">
               <button type="button" data-print>Print / Save PDF</button>
@@ -736,7 +768,18 @@ function renderPlanner(project: Project) {
           </div>
           <div id="report">${renderReport(project)}</div>
         </div>
-      </details>
+      `
+          : `
+        <div class="report-gate-content">
+          <div class="section-heading">
+            <span>Report generation</span>
+            <strong>Generate the selected system report</strong>
+            <em>Creates the ${systemOptionName(selectedSystem)} report section below the planner when you are ready to review, print, or export.</em>
+          </div>
+          <button type="button" data-generate-report>Generate Report</button>
+        </div>
+      `
+      }
     </section>
   `;
 }
@@ -746,21 +789,23 @@ function render() {
 
   const project = activeProject();
   const brand = brands.find((item) => item.id === project.brandProfileId) ?? brands[0];
-  document.documentElement.style.setProperty("--brand", brand.primaryColor);
-  document.documentElement.style.setProperty("--accent", brand.accentColor);
 
   app.innerHTML = `
     <div class="app-shell">
       <header class="topbar">
-        <div>
-          <p>${brand.name}</p>
+        <div class="brand-lockup">
+          <div class="brand-mark" aria-hidden="true">
+            <img src="${solarPlannerLogoUrl}" alt="" />
+          </div>
+          <div>
           <h1>Hello Solar Planner</h1>
+          </div>
         </div>
         <div class="top-actions">
           <select data-project-switch aria-label="Switch project">
             ${state.projects.map((item) => `<option value="${item.id}" ${item.id === project.id ? "selected" : ""}>${item.name}</option>`).join("")}
           </select>
-          <button type="button" data-new-project>New</button>
+          <button type="button" data-new-project>New Project</button>
           <button type="button" data-load-sample>Sample</button>
         </div>
       </header>
@@ -935,17 +980,18 @@ function bindEvents() {
     render();
   });
 
+  document.querySelector("[data-generate-report]")?.addEventListener("click", () => {
+    reportVisible = true;
+    render();
+    document.querySelector(".report-panel-ready")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
   document.querySelectorAll("[data-print]").forEach((button) => {
     button.addEventListener("click", () => {
-      document.querySelector<HTMLDetailsElement>("[data-report-details]")?.setAttribute("open", "");
       window.print();
     });
   });
 
 }
-
-window.addEventListener("beforeprint", () => {
-  document.querySelector<HTMLDetailsElement>("[data-report-details]")?.setAttribute("open", "");
-});
 
 render();

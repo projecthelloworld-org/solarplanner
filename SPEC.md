@@ -6,6 +6,8 @@ This document describes the intended behavior, calculations, data flow, reportin
 
 Hello Solar Planner is a simple open-source planning tool for Project Hello World and community network partners. It helps users estimate solar system requirements for connectivity equipment such as routers, access points, tablets, lights, USB charging stations, monitoring gateways, and technician devices.
 
+Hello Solar Planner is free for communities, partners, and practitioners to use, adapt, and modify based on their needs.
+
 The tool is designed for early planning and comparison. It is not a certified electrical design package.
 
 ## System Options

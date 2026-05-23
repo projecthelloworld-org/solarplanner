@@ -4,6 +4,8 @@ Hello Solar Planner is a lightweight, no-framework TypeScript web application fo
 
 The app helps a user define a project, enter electrical loads, generate equipment quantities, check whether edited equipment can still handle the load, estimate costs, and produce a printable report or CSV export.
 
+Hello Solar Planner is an open-source project by Project Hello World, free for communities, partners, and practitioners to use, adapt, and modify based on their needs.
+
 Hello Solar Planner is for planning estimates only. It is not certified electrical design. Final system design and installation must be reviewed by a qualified solar or electrical technician.
 
 ## Documents
