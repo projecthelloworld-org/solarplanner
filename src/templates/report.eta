@@ -21,7 +21,7 @@
       <p><strong>Critical energy</strong><span><%= it.formatEnergy(it.result.criticalDailyWh) %></span></p>
     </div>
     <p class="report-note">
-      This estimate compares a fully DC system with a hybrid DC + AC system for community connectivity loads.
+      This estimate is prepared for the selected <%= it.selectedSystemName %> planning path. Other planner options remain available in the app for comparison.
     </p>
   </section>
 
@@ -30,9 +30,11 @@
     <div class="report-grid">
       <p><strong>Country</strong><span><%= it.project.country %></span></p>
       <p><strong>Currency</strong><span><%= it.project.currency %></span></p>
+      <p><strong>USD exchange rate</strong><span>1 USD = <%= it.formatDecimal(it.project.usdExchangeRate) %> <%= it.project.currency %></span></p>
       <p><strong>System voltage</strong><span><%= it.project.systemVoltage %> V</span></p>
       <p><strong>Sun hours</strong><span><%= it.project.sunHours %> h/day</span></p>
       <p><strong>Autonomy</strong><span><%= it.project.autonomyDays %> day(s)</span></p>
+      <p><strong>Report option</strong><span><%= it.selectedSystemName %></span></p>
       <p><strong>Brand profile</strong><span><%= it.brand.name %></span></p>
     </div>
   </section>
@@ -83,44 +85,96 @@
       <thead>
         <tr>
           <th>Metric</th>
-          <th>Fully DC system</th>
-          <th>Hybrid DC + AC system</th>
+          <th><%= it.selectedSystemName %></th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td>Adjusted daily energy</td>
-          <td><%= it.formatEnergy(it.result.dc.adjustedDailyWh) %></td>
-          <td><%= it.formatEnergy(it.result.hybrid.adjustedDailyWh) %></td>
+          <td><%= it.formatEnergy(it.selectedSizing.adjustedDailyWh) %></td>
         </tr>
         <tr>
           <td>Required LiFePO4 battery</td>
-          <td><%= it.formatEnergy(it.result.dc.requiredBatteryWh) %></td>
-          <td><%= it.formatEnergy(it.result.hybrid.requiredBatteryWh) %></td>
+          <td><%= it.formatEnergy(it.selectedSizing.requiredBatteryWh) %></td>
         </tr>
         <tr>
           <td>Recommended solar array</td>
-          <td><%= it.formatNumber(it.result.dc.recommendedSolarArrayW) %> W</td>
-          <td><%= it.formatNumber(it.result.hybrid.recommendedSolarArrayW) %> W</td>
+          <td><%= it.formatNumber(it.selectedSizing.recommendedSolarArrayW) %> W</td>
         </tr>
         <tr>
           <td>Recommended MPPT current</td>
-          <td><%= it.result.dc.recommendedMpptCurrentA %> A</td>
-          <td><%= it.result.hybrid.recommendedMpptCurrentA %> A</td>
+          <td><%= it.selectedSizing.recommendedMpptCurrentA %> A</td>
         </tr>
         <tr>
           <td>Recommended inverter size</td>
-          <td>Not required</td>
-          <td><%= it.formatNumber(it.result.hybrid.recommendedInverterW) %> W</td>
+          <td><%= it.selectedSystem === "hybrid" ? `${it.formatNumber(it.selectedSizing.recommendedInverterW)} W` : "Not required" %></td>
         </tr>
       </tbody>
     </table>
   </section>
 
-  <% it.recommendations.forEach((option) => { %>
+  <section class="report-section">
+    <h2>Generated / Edited Equipment Plan</h2>
+    <table class="report-table">
+      <thead>
+        <tr>
+          <th>Equipment</th>
+          <th>Current plan</th>
+          <th>Actual capacity</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Solar panels</td>
+          <td><%= it.plan.shared.panelCount %> panel(s) x <%= it.plan.shared.panelWatts %> W</td>
+          <td><%= it.formatNumber(it.actuals.solarArrayW) %> W</td>
+          <td>Requirement: <%= it.formatNumber(it.selectedSizing.recommendedSolarArrayW) %> W</td>
+        </tr>
+        <tr>
+          <td>LiFePO4 batteries</td>
+          <td><%= it.plan.shared.batteryCount %> battery/batteries x <%= it.plan.shared.batteryVoltage %> V x <%= it.plan.shared.batteryAh %> Ah</td>
+          <td><%= it.formatEnergy(it.actuals.batteryWh) %></td>
+          <td>Requirement: <%= it.formatEnergy(it.selectedSizing.requiredBatteryWh) %></td>
+        </tr>
+        <% if (it.selectedSystem === "dc") { %>
+        <tr>
+          <td>Fully DC MPPT/controller</td>
+          <td><%= it.plan.dc.controllerCount %> controller(s) x <%= it.plan.dc.mpptAmps %> A</td>
+          <td><%= it.plan.dc.mpptAmps %> A</td>
+          <td>Requirement: <%= it.selectedSizing.recommendedMpptCurrentA %> A</td>
+        </tr>
+        <% } else { %>
+        <tr>
+          <td>Hybrid MPPT/controller</td>
+          <td><%= it.plan.hybrid.controllerCount %> controller(s) x <%= it.plan.hybrid.mpptAmps %> A</td>
+          <td><%= it.plan.hybrid.mpptAmps %> A</td>
+          <td>Requirement: <%= it.selectedSizing.recommendedMpptCurrentA %> A</td>
+        </tr>
+        <tr>
+          <td>Hybrid inverter</td>
+          <td><%= it.plan.hybrid.inverterCount %> inverter(s) x <%= it.plan.hybrid.inverterWatts %> W</td>
+          <td><%= it.formatNumber(it.actuals.hybridInverterW) %> W</td>
+          <td>Requirement: <%= it.formatNumber(it.selectedSizing.recommendedInverterW) %> W</td>
+        </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </section>
+
     <section class="report-section option-section">
-      <h2><%= option.name %></h2>
-      <p class="section-intro"><%= option.summary %></p>
+      <h2><%= it.selectedRecommendation.name %></h2>
+      <p class="status-line <%= it.selectedEvaluation.status === "Pass" ? "pass" : "warn" %>">
+        <strong>Status:</strong> <%= it.selectedEvaluation.status %>
+      </p>
+      <% if (it.selectedEvaluation.warnings.length > 0) { %>
+        <ul class="report-warning-list">
+          <% it.selectedEvaluation.warnings.forEach((warning) => { %>
+            <li><%= warning %></li>
+          <% }) %>
+        </ul>
+      <% } %>
+      <p class="section-intro"><%= it.selectedRecommendation.summary %></p>
       <table class="report-table">
         <thead>
           <tr>
@@ -130,7 +184,7 @@
           </tr>
         </thead>
         <tbody>
-          <% option.lines.forEach((line) => { %>
+          <% it.selectedRecommendation.lines.forEach((line) => { %>
             <tr>
               <td><%= line.category %></td>
               <td><%= line.recommendation %></td>
@@ -140,22 +194,18 @@
         </tbody>
       </table>
     </section>
-  <% }) %>
 
   <section class="report-section financial-section">
     <h2>Financial Summary</h2>
     <div class="total-strip">
-      <% it.costs.forEach((estimate) => { %>
         <p>
-          <strong><%= estimate.systemId === "dc" ? "Fully DC option" : "Hybrid DC + AC option" %></strong>
-          <span><%= it.money(estimate.total) %></span>
+          <strong><%= it.selectedSystemName %> option</strong>
+          <span><%= it.money(it.selectedCost.total) %></span>
         </p>
-      <% }) %>
     </div>
 
-    <% it.costs.forEach((estimate) => { %>
       <div class="cost-block">
-        <h3><%= estimate.systemId === "dc" ? "Fully DC Cost Detail" : "Hybrid DC + AC Cost Detail" %></h3>
+        <h3><%= it.selectedSystemName %> Cost Detail</h3>
         <table class="report-table compact-table">
           <thead>
             <tr>
@@ -167,12 +217,12 @@
             </tr>
           </thead>
           <tbody>
-            <% estimate.lines.forEach((line) => { %>
+            <% it.selectedCost.lines.forEach((line) => { %>
               <tr>
                 <td><%= line.category %></td>
                 <td><%= line.description %></td>
                 <td><%= line.quantity %></td>
-                <td><%= it.money(line.unitCost) %></td>
+                <td><%= it.moneyDetailed(line.unitCost) %> (<%= it.moneyUsd(line.unitCostUsd) %>)</td>
                 <td><%= it.money(line.total) %></td>
               </tr>
             <% }) %>
@@ -181,25 +231,24 @@
               <td>Planning allowance based on editable assumption</td>
               <td>1</td>
               <td><%= it.formatPercent(it.assumptions.installationRate) %></td>
-              <td><%= it.money(estimate.installation) %></td>
+              <td><%= it.money(it.selectedCost.installation) %></td>
             </tr>
             <tr>
               <td>Contingency</td>
               <td>Planning allowance for local variance and missing items</td>
               <td>1</td>
               <td><%= it.formatPercent(it.assumptions.contingencyRate) %></td>
-              <td><%= it.money(estimate.contingency) %></td>
+              <td><%= it.money(it.selectedCost.contingency) %></td>
             </tr>
           </tbody>
           <tfoot>
             <tr>
               <td colspan="4">Estimated total</td>
-              <td><%= it.money(estimate.total) %></td>
+              <td><%= it.money(it.selectedCost.total) %> (<%= it.moneyUsd(it.selectedCost.totalUsd) %>)</td>
             </tr>
           </tfoot>
         </table>
       </div>
-    <% }) %>
   </section>
 
   <section class="report-section">
@@ -213,6 +262,9 @@
       <p><strong>PV derate factor</strong><span><%= it.formatPercent(it.assumptions.arrayDerateFactor) %></span></p>
       <p><strong>MPPT safety factor</strong><span><%= it.formatPercent(it.assumptions.mpptSafetyFactor) %></span></p>
       <p><strong>Inverter headroom factor</strong><span><%= it.formatPercent(it.assumptions.inverterHeadroomFactor) %></span></p>
+      <p><strong>Panel price</strong><span><%= it.moneyUsd(it.project.pricing.panelUnitUsd) %> / panel</span></p>
+      <p><strong>Battery price</strong><span><%= it.moneyUsd(it.project.pricing.batteryUnitUsd) %> / battery</span></p>
+      <p><strong>Inverter price</strong><span><%= it.moneyUsd(it.project.pricing.inverterUnitUsd) %> / inverter</span></p>
     </div>
     <p class="report-note"><%= it.assumptions.currencyExchangeNotes %></p>
   </section>

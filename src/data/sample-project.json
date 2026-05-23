@@ -3,10 +3,31 @@
   "name": "Hello Hub Lite sample",
   "country": "Uganda",
   "currency": "USD",
+  "usdExchangeRate": 1,
   "systemVoltage": 24,
   "sunHours": 4.8,
   "autonomyDays": 1.5,
   "brandProfileId": "project-hello-world",
+  "selectedSystem": "dc",
+  "equipmentDefaults": {
+    "panelWatts": 450,
+    "batteryVoltage": 24,
+    "batteryAh": 100,
+    "mpptAmpStep": 10,
+    "inverterWattStep": 500
+  },
+  "pricing": {
+    "panelUnitUsd": 245,
+    "batteryUnitUsd": 560,
+    "controllerUnitUsd": 260,
+    "inverterUnitUsd": 690,
+    "dcDistributionUnitUsd": 180,
+    "acDistributionUnitUsd": 220,
+    "cablingUnitUsd": 210,
+    "earthingUnitUsd": 190,
+    "monitoringUnitUsd": 155
+  },
+  "equipmentPlanMode": "generated",
   "updatedAt": "2026-05-19T00:00:00.000Z",
   "loads": [
     {

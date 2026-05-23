@@ -1,97 +1,120 @@
-import type { Assumptions, CalculationResult, CostEstimate, CostLine, ProductCatalog, ProductItem, Project } from "../types/project";
+import type { Assumptions, CostEstimate, CostLine, EquipmentPlan, PricingSettings, Project, SystemOptionId } from "../types/project";
 
-const ceilDiv = (value: number, unit: number): number => Math.max(1, Math.ceil(value / unit));
+const convert = (usd: number, exchangeRate: number): number => Math.round(usd * Math.max(0, exchangeRate));
 
-const cheapestByCapacity = (items: ProductItem[], key: "watts" | "wattHours" | "amps", required: number): ProductItem => {
-  const sorted = [...items].sort((a, b) => {
-    const aCapacity = a[key] ?? 1;
-    const bCapacity = b[key] ?? 1;
-    return a.unitCost / aCapacity - b.unitCost / bCapacity;
-  });
-  const fitting = sorted.find((item) => (item[key] ?? 0) >= required);
-  return fitting ?? sorted[0];
-};
-
-const fixed = (items: ProductItem[], category: string, description?: string): CostLine => {
-  const item = items[0];
-  return {
-    category,
-    description: description ?? item.name,
-    quantity: 1,
-    unitCost: item.unitCost,
-    total: item.unitCost,
-  };
-};
-
-function capacityLine(
-  category: string,
-  items: ProductItem[],
-  key: "watts" | "wattHours" | "amps",
-  required: number,
-  descriptionSuffix = "",
-): CostLine {
-  const item = cheapestByCapacity(items, key, required);
-  const capacity = item[key] ?? required;
-  const quantity = ceilDiv(required, capacity);
+function line(category: string, description: string, quantity: number, unitCostUsd: number, exchangeRate: number): CostLine {
+  const totalUsd = quantity * unitCostUsd;
 
   return {
     category,
-    description: `${item.name}${descriptionSuffix}`,
+    description,
     quantity,
-    unitCost: item.unitCost,
-    total: quantity * item.unitCost,
+    unitCostUsd,
+    unitCost: convert(unitCostUsd, exchangeRate),
+    totalUsd,
+    total: convert(totalUsd, exchangeRate),
   };
 }
 
 export function estimateCosts(
   project: Project,
-  result: CalculationResult,
-  products: ProductCatalog,
+  plan: EquipmentPlan,
+  pricing: PricingSettings,
   assumptions: Assumptions,
-  systemId: "dc" | "hybrid",
+  systemId: SystemOptionId,
 ): CostEstimate {
-  const sizing = systemId === "dc" ? result.dc : result.hybrid;
+  const exchangeRate = Math.max(0, project.usdExchangeRate || 1);
   const lines: CostLine[] = [
-    capacityLine("Solar panels", products.solarPanels, "watts", sizing.recommendedSolarArrayW),
-    capacityLine("LiFePO4 battery storage", products.batteries, "wattHours", sizing.requiredBatteryWh),
+    line("Solar panels", `${plan.shared.panelCount} panel(s) x ${plan.shared.panelWatts} W`, plan.shared.panelCount, pricing.panelUnitUsd, exchangeRate),
+    line(
+      "LiFePO4 battery storage",
+      `${plan.shared.batteryCount} battery/batteries x ${plan.shared.batteryVoltage} V x ${plan.shared.batteryAh} Ah`,
+      plan.shared.batteryCount,
+      pricing.batteryUnitUsd,
+      exchangeRate,
+    ),
   ];
 
   if (systemId === "dc") {
-    lines.push(capacityLine("Charge controller or hybrid inverter", products.chargeControllers, "amps", sizing.recommendedMpptCurrentA));
+    lines.push(
+      line(
+        "Charge controller or hybrid inverter",
+        `${plan.dc.controllerCount} controller(s) x ${plan.dc.mpptAmps} A MPPT`,
+        plan.dc.controllerCount,
+        pricing.controllerUnitUsd,
+        exchangeRate,
+      ),
+    );
   } else {
     lines.push(
-      capacityLine(
+      line(
         "Charge controller or hybrid inverter",
-        products.hybridInverters,
-        "watts",
-        Math.max(sizing.recommendedInverterW, sizing.recommendedSolarArrayW),
-        " with AC output",
+        `${plan.hybrid.controllerCount} controller(s) x ${plan.hybrid.mpptAmps} A MPPT`,
+        plan.hybrid.controllerCount,
+        pricing.controllerUnitUsd,
+        exchangeRate,
+      ),
+      line(
+        "Hybrid inverter capacity",
+        `${plan.hybrid.inverterCount} inverter(s) x ${plan.hybrid.inverterWatts} W`,
+        plan.hybrid.inverterCount,
+        pricing.inverterUnitUsd,
+        exchangeRate,
       ),
     );
   }
 
-  lines.push(fixed(products.dcDistribution, "DC distribution and protection"));
+  lines.push(
+    line(
+      "DC distribution and protection",
+      "DC breaker board, fuses, labels, and surge protection",
+      plan.balance.dcDistributionCount,
+      pricing.dcDistributionUnitUsd,
+      exchangeRate,
+    ),
+  );
 
   if (systemId === "hybrid") {
-    lines.push(fixed(products.acDistribution, "AC distribution for hybrid systems"));
+    lines.push(
+      line(
+        "AC distribution for hybrid systems",
+        "AC breaker board, RCD, outlets, and labels",
+        plan.balance.acDistributionCount,
+        pricing.acDistributionUnitUsd,
+        exchangeRate,
+      ),
+    );
   }
 
   lines.push(
-    fixed(products.cabling, "Cabling and connectors"),
-    fixed(products.earthing, "Earthing and lightning protection"),
-    fixed(products.monitoring, "Monitoring"),
+    line("Cabling and connectors", "PV, battery, and load cabling with MC4/connectors", plan.balance.cablingCount, pricing.cablingUnitUsd, exchangeRate),
+    line(
+      "Earthing and lightning protection",
+      "Earthing rod, bonding, surge, and lightning protection kit",
+      plan.balance.earthingCount,
+      pricing.earthingUnitUsd,
+      exchangeRate,
+    ),
+    line("Monitoring", "Battery monitor and remote energy logging", plan.balance.monitoringCount, pricing.monitoringUnitUsd, exchangeRate),
   );
 
-  const subtotal = lines.reduce((sum, line) => sum + line.total, 0);
-  const installation = Math.round(subtotal * assumptions.installationRate);
-  const contingency = Math.round((subtotal + installation) * assumptions.contingencyRate);
+  const subtotalUsd = lines.reduce((sum, item) => sum + item.totalUsd, 0);
+  const installationUsd = Math.round(subtotalUsd * assumptions.installationRate);
+  const contingencyUsd = Math.round((subtotalUsd + installationUsd) * assumptions.contingencyRate);
+  const totalUsd = subtotalUsd + installationUsd + contingencyUsd;
 
   return {
     systemId,
     lines,
-    subtotal,
-    installation,
-    contingency,
-    total: subtotal + installation + contingency,
+    subtotalUsd,
+    subtotal: convert(subtotalUsd, exchangeRate),
+    installationUsd,
+    installation: convert(installationUsd, exchangeRate),
+    contingencyUsd,
+    contingency: convert(contingencyUsd, exchangeRate),
+    totalUsd,
+    total: convert(totalUsd, exchangeRate),
+    currency: project.currency,
+    exchangeRate,
   };
 }

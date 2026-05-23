@@ -54,7 +54,25 @@ button {
   box-shadow: 0 8px 18px rgba(31, 111, 104, 0.18);
 }
 
+.button-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  border-radius: 8px;
+  background: var(--brand);
+  color: #fff;
+  padding: 0 14px;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 8px 18px rgba(31, 111, 104, 0.18);
+}
+
 button:hover {
+  background: color-mix(in srgb, var(--brand) 86%, black);
+}
+
+.button-link:hover {
   background: color-mix(in srgb, var(--brand) 86%, black);
 }
 
@@ -132,6 +150,13 @@ label span,
   align-items: start;
 }
 
+.side-column,
+.main-column {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
 .panel {
   min-width: 0;
   background: var(--surface);
@@ -140,40 +165,44 @@ label span,
   box-shadow: var(--shadow);
 }
 
-.project-panel,
-.assumptions-panel {
-  grid-column: 1;
-}
-
-.metrics-panel,
-.loads-panel,
-.recommendations-panel,
 .report-panel {
-  grid-column: 2;
+  margin-top: 16px;
 }
 
-.project-panel {
-  grid-row: 1 / span 2;
+.report-details {
+  background: transparent;
+  padding: 0;
 }
 
-.assumptions-panel {
-  grid-row: 3 / span 2;
+.report-summary {
+  display: block;
+  cursor: pointer;
+  list-style: none;
 }
 
-.metrics-panel {
-  grid-row: 1;
+.report-summary::-webkit-details-marker {
+  display: none;
 }
 
-.loads-panel {
-  grid-row: 2;
+.report-summary .section-heading {
+  margin-bottom: 0;
 }
 
-.recommendations-panel {
-  grid-row: 3;
+.report-summary .section-heading strong::before {
+  content: "▸ ";
+  color: var(--brand);
 }
 
-.report-panel {
-  grid-row: 4;
+.report-details[open] .report-summary .section-heading strong::before {
+  content: "▾ ";
+}
+
+.report-body {
+  padding-top: 16px;
+}
+
+.report-toolbar {
+  margin-bottom: 14px;
 }
 
 .section-heading {
@@ -187,7 +216,8 @@ label span,
 }
 
 .form-grid,
-.assumption-grid {
+.assumption-grid,
+.mini-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
@@ -195,6 +225,7 @@ label span,
 
 .form-grid label,
 .assumption-grid label,
+.mini-grid label,
 .price-list label {
   display: grid;
   gap: 5px;
@@ -228,6 +259,14 @@ label span,
   align-items: start;
   justify-content: space-between;
   gap: 12px;
+}
+
+.load-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .table-wrap {
@@ -295,11 +334,96 @@ th {
   gap: 14px;
 }
 
+.equipment-grid {
+  display: grid;
+  gap: 12px;
+}
+
 .option-card {
   border-radius: 8px;
   background: linear-gradient(180deg, #ffffff 0%, #f7faf8 100%);
   padding: 16px;
   box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.selected-option {
+  box-shadow:
+    inset 0 0 0 2px var(--brand),
+    0 10px 22px rgba(31, 111, 104, 0.1);
+}
+
+.equipment-card {
+  border-radius: 8px;
+  background: #f7faf8;
+  padding: 14px;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.card-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.card-heading h2 {
+  margin: 0;
+}
+
+.report-choice,
+.card-heading span:not(.status-pill) {
+  color: var(--muted);
+  font-weight: 800;
+  text-align: right;
+}
+
+.report-choice {
+  display: inline-block;
+  margin-top: 4px;
+  color: var(--brand);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  white-space: nowrap;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.status-pill.pass {
+  background: #dff3e5;
+  color: #176139;
+}
+
+.status-pill.warn {
+  background: #fff2ca;
+  color: #7a4f00;
+}
+
+.warning-list,
+.pass-note,
+.comparison-note {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.warning-list {
+  display: grid;
+  gap: 6px;
+  padding-left: 18px;
+  color: #7a4f00;
+}
+
+.pass-note {
+  color: #176139;
 }
 
 .option-card h2,
@@ -347,6 +471,11 @@ dd {
   margin-top: 16px;
 }
 
+.accordion-list {
+  display: grid;
+  gap: 8px;
+}
+
 details {
   border-radius: 8px;
   background: var(--soft);
@@ -359,10 +488,28 @@ summary {
   text-transform: capitalize;
 }
 
+.accordion-body {
+  padding-top: 12px;
+}
+
+label em {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-style: normal;
+}
+
 .price-list {
   display: grid;
   gap: 10px;
   padding: 12px 0 4px;
+}
+
+.report-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 #report {
@@ -464,6 +611,33 @@ summary {
   color: var(--muted);
 }
 
+.status-line {
+  display: inline-flex;
+  gap: 6px;
+  margin: 0 0 10px;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-weight: 800;
+}
+
+.status-line.pass {
+  background: #dff3e5;
+  color: #176139;
+}
+
+.status-line.warn {
+  background: #fff2ca;
+  color: #7a4f00;
+}
+
+.report-warning-list {
+  display: grid;
+  gap: 5px;
+  margin: 0 0 10px;
+  padding-left: 18px;
+  color: #7a4f00;
+}
+
 .report-table {
   table-layout: fixed;
   font-size: 0.9rem;
@@ -539,17 +713,6 @@ footer {
 }
 
 @media (max-width: 1050px) {
-  .planner-grid,
-  .project-panel,
-  .assumptions-panel,
-  .metrics-panel,
-  .loads-panel,
-  .recommendations-panel,
-  .report-panel {
-    grid-column: 1;
-    grid-template-columns: 1fr;
-  }
-
   .planner-grid {
     grid-template-columns: 1fr;
   }
@@ -569,13 +732,19 @@ footer {
   }
 
   .top-actions,
+  .report-actions,
+  .load-actions,
   .top-actions select,
-  .top-actions button {
+  .top-actions button,
+  .load-actions button,
+  .report-actions button,
+  .report-actions .button-link {
     width: 100%;
   }
 
   .form-grid,
   .assumption-grid,
+  .mini-grid,
   .option-grid,
   .summary-band,
   .report-grid,
@@ -610,14 +779,17 @@ footer {
   .metrics-panel,
   .loads-panel,
   .recommendations-panel,
-  .assumptions-panel,
-  .report-panel > .panel-title-row {
+  .equipment-panel,
+  .report-summary,
+  .report-toolbar {
     display: none;
   }
 
   .app-shell,
   .planner-grid,
   .report-panel,
+  .report-details,
+  .report-body,
   #report {
     width: 100%;
     max-width: none;
