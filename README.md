@@ -11,6 +11,7 @@ Hello Solar Planner is for planning estimates only. It is not certified electric
 ## Documents
 
 - [README.md](README.md) - project overview, setup, and day-to-day usage.
+- [USER_MANUAL.md](USER_MANUAL.md) - step-by-step guide for using the planner.
 - [SPEC.md](SPEC.md) - detailed product behavior, calculations, data flow, report structure, and safety notes.
 
 ## What The App Does
