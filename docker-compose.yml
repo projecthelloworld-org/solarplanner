@@ -1,0 +1,7 @@
+services:
+  hello-solar-planner:
+    build: .
+    container_name: hello-solar-planner
+    ports:
+      - "8080:80"
+    restart: unless-stopped

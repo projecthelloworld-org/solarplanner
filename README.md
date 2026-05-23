@@ -84,6 +84,28 @@ Preview the production build:
 npm run preview
 ```
 
+## Run With Docker Compose
+
+Build and run the production container:
+
+```bash
+docker compose up --build
+```
+
+Open the app at:
+
+```text
+http://localhost:8080
+```
+
+Stop the container:
+
+```bash
+docker compose down
+```
+
+The Docker setup builds the Vite app and serves the static `dist/` files with Nginx. Saved projects still live in the user's browser LocalStorage, so no database volume is required.
+
 ## Project Structure
 
 ```text
