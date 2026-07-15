@@ -409,15 +409,24 @@ function csvDownloadHref(project: Project) {
   return `data:text/csv;charset=utf-8,${encodeURIComponent(`\uFEFF${buildCsvExport(project)}`)}`;
 }
 
-function attribute(value: string) {
-  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+function escapeHtml(value: string | number) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function attribute(value: string | number) {
+  return escapeHtml(value);
 }
 
 function input(label: string, attrs: string, value: string | number) {
   return `
     <label>
       <span>${label}</span>
-      <input ${attrs} value="${String(value)}" />
+      <input ${attrs} value="${attribute(value)}" />
     </label>
   `;
 }
@@ -427,7 +436,7 @@ function renderProjectPanel(project: Project) {
     <section class="panel project-panel">
       <div class="section-heading">
         <span>Project</span>
-        <strong>${project.name}</strong>
+        <strong>${escapeHtml(project.name)}</strong>
       </div>
       <div class="form-grid">
         ${input("Project name", 'type="text" data-project-field="name"', project.name)}
@@ -461,29 +470,29 @@ function renderLoadRows(project: Project) {
   return project.loads
     .map(
       (load) => `
-      <tr data-load-row data-load-id="${load.id}">
+      <tr data-load-row data-load-id="${attribute(load.id)}">
         <td>
           <div class="load-name-cell">
-            <input aria-label="Load name" data-load-id="${load.id}" data-load-field="name" value="${load.name}" />
+            <input aria-label="Load name" data-load-id="${attribute(load.id)}" data-load-field="name" value="${attribute(load.name)}" />
           </div>
         </td>
-        <td><input aria-label="Quantity" type="number" min="0" step="1" data-load-id="${load.id}" data-load-field="quantity" value="${load.quantity}" /></td>
-        <td><input aria-label="Watts" type="number" min="0" step="1" data-load-id="${load.id}" data-load-field="watts" value="${load.watts}" /></td>
-        <td><input aria-label="Hours per day" type="number" min="0" step="0.25" data-load-id="${load.id}" data-load-field="hoursPerDay" value="${load.hoursPerDay}" /></td>
+        <td><input aria-label="Quantity" type="number" min="0" step="1" data-load-id="${attribute(load.id)}" data-load-field="quantity" value="${attribute(load.quantity)}" /></td>
+        <td><input aria-label="Watts" type="number" min="0" step="1" data-load-id="${attribute(load.id)}" data-load-field="watts" value="${attribute(load.watts)}" /></td>
+        <td><input aria-label="Hours per day" type="number" min="0" step="0.25" data-load-id="${attribute(load.id)}" data-load-field="hoursPerDay" value="${attribute(load.hoursPerDay)}" /></td>
         <td>
-          <select aria-label="Current type" data-load-id="${load.id}" data-load-field="currentType">
+          <select aria-label="Current type" data-load-id="${attribute(load.id)}" data-load-field="currentType">
             <option value="DC" ${load.currentType === "DC" ? "selected" : ""}>DC</option>
             <option value="AC" ${load.currentType === "AC" ? "selected" : ""}>AC</option>
           </select>
         </td>
-        <td><input aria-label="Voltage" type="number" min="0" step="1" data-load-id="${load.id}" data-load-field="voltage" value="${load.voltage}" /></td>
-        <td><input aria-label="Surge multiplier" type="number" min="1" step="0.1" data-load-id="${load.id}" data-load-field="surgeMultiplier" value="${load.surgeMultiplier}" /></td>
+        <td><input aria-label="Voltage" type="number" min="0" step="1" data-load-id="${attribute(load.id)}" data-load-field="voltage" value="${attribute(load.voltage)}" /></td>
+        <td><input aria-label="Surge multiplier" type="number" min="1" step="0.1" data-load-id="${attribute(load.id)}" data-load-field="surgeMultiplier" value="${attribute(load.surgeMultiplier)}" /></td>
         <td>
           <label class="check-cell">
-            <input type="checkbox" data-load-id="${load.id}" data-load-field="critical" ${load.critical ? "checked" : ""} />
+            <input type="checkbox" data-load-id="${attribute(load.id)}" data-load-field="critical" ${load.critical ? "checked" : ""} />
           </label>
         </td>
-        <td><button class="icon-button delete-button" type="button" data-remove-load="${load.id}" aria-label="Remove ${load.name}">×</button></td>
+        <td><button class="icon-button delete-button" type="button" data-remove-load="${attribute(load.id)}" aria-label="Remove ${attribute(load.name)}">×</button></td>
       </tr>
     `,
     )
@@ -803,7 +812,7 @@ function render() {
         </div>
         <div class="top-actions">
           <select data-project-switch aria-label="Switch project">
-            ${state.projects.map((item) => `<option value="${item.id}" ${item.id === project.id ? "selected" : ""}>${item.name}</option>`).join("")}
+            ${state.projects.map((item) => `<option value="${attribute(item.id)}" ${item.id === project.id ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("")}
           </select>
           <button type="button" data-new-project>New Project</button>
           <button type="button" data-load-sample>Sample</button>

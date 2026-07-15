@@ -1,0 +1,23 @@
+default:
+  image: node:20.19-alpine
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - .npm/
+
+stages:
+  - verify
+
+verify:
+  stage: verify
+  before_script:
+    - npm ci --cache .npm --prefer-offline
+  script:
+    - npm run check
+  artifacts:
+    name: "hello-solar-planner-$CI_COMMIT_REF_SLUG"
+    paths:
+      - dist/
+    expire_in: 7 days

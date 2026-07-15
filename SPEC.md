@@ -1,4 +1,4 @@
-# Hello Solar Planner Specification
+# Hello Solar Planner v1 Specification
 
 This document describes the intended behavior, calculations, data flow, reporting, and limitations for Hello Solar Planner.
 
@@ -28,7 +28,8 @@ Both option cards remain visible in the planner so users can compare them. The p
 5. The user can manually edit equipment quantities, capacities, and prices.
 6. Manual equipment edits are preserved while warnings update against the latest load-based requirement.
 7. The user can click **Use generated values** to reset equipment quantities and capacities from the current load demand.
-8. The user opens **Report generation** to print/save PDF or export CSV for the selected system option.
+8. The user clicks **Generate Report** when ready to render the selected system report.
+9. The user prints/saves PDF or exports CSV from the rendered report section.
 
 ## Project Fields
 
@@ -41,10 +42,9 @@ Project Summary includes:
 - system voltage
 - sun hours
 - autonomy days
-- brand profile
 - System Option
 
-The brand profile affects branding, tagline, colors, and report footer only. It does not currently affect calculations, prices, assumptions, or equipment generation.
+The v1 user interface does not expose a Brand Profile selector. Legacy/internal brand metadata may still be used by the report renderer, but it does not affect calculations, prices, assumptions, or equipment generation.
 
 ## Load Fields
 
@@ -298,7 +298,7 @@ Installation and contingency are calculated from editable assumption rates.
 
 ## Reports
 
-The report section is folded by default and appears below the planner. The top page-level print button has been removed; report actions live at the start of the report section.
+The report area appears below the planner as a compact **Generate Report** action. Report content and export actions are not rendered until the user deliberately clicks the button. The top page-level print button has been removed; report actions appear with the generated report.
 
 The printable/PDF report includes only the selected System Option:
 
