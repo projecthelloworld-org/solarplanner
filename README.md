@@ -11,6 +11,8 @@ The planner estimates energy demand, battery storage, solar array capacity, char
 
 Current supported release: **v1.0.0**
 
+> **PHW branch:** this branch adds the Project Hello World tools landing page for `tools.myhellohub.org`. The reusable planner remains available at `/solar/`. Partner deployments should normally use the `v1.0.0` tag from `master`.
+
 > Hello Solar Planner provides planning estimates, not certified electrical design. A qualified solar/electrical technician must review the final design and installation.
 
 ## Open-Source Philosophy
@@ -44,6 +46,7 @@ The default deployment has no backend, no accounts, and no telemetry. Project da
 | [USER_MANUAL.md](USER_MANUAL.md) | Planner users | Complete step-by-step operating guide |
 | [SPEC.md](SPEC.md) | Technical reviewers | Functional behavior, formulas, and assumptions |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Self-hosters | Docker, static hosting, Dokploy, HTTPS, upgrades, and troubleshooting |
+| [docs/PHW_DEPLOYMENT.md](docs/PHW_DEPLOYMENT.md) | PHW operators | `tools.myhellohub.org` branch-specific Dokploy deployment |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Developers | Modules, data flow, persistence, and v2 target structure |
 | [docs/CODEBASE_REVIEW.md](docs/CODEBASE_REVIEW.md) | Maintainers | v1 assessment and prioritized v2 roadmap |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Contributors | Development and merge-request workflow |
