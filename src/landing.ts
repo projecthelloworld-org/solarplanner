@@ -71,7 +71,7 @@ if (app) {
               </ul>
               <div class="tool-actions">
                 <a class="primary-action" href="/solar/">Open Solar Planner</a>
-                <a class="text-action" href="https://os.myhellohub.org/helloworld/solar_planner">View the source code</a>
+                <a class="text-action" href="https://github.com/projecthelloworld-org/solarplanner" target="_blank" rel="noreferrer">View the source code</a>
               </div>
             </div>
 
@@ -102,7 +102,7 @@ if (app) {
               </ul>
               <p class="hubos-verbs">Monitor · Understand · Improve · Protect · Prove</p>
               <div class="tool-actions hubos-actions">
-                <a class="secondary-action" href="https://os.myhellohub.org/helloworld" target="_blank" rel="noreferrer">View the source code</a>
+                <a class="secondary-action" href="https://github.com/projecthelloworld-org/hub-os" target="_blank" rel="noreferrer">View the source code</a>
               </div>
             </div>
 
@@ -139,7 +139,7 @@ if (app) {
               <p>Field experience can become shared improvements, documentation, and new tools for other communities.</p>
             </article>
           </div>
-          <a class="secondary-action" href="https://os.myhellohub.org/helloworld/solar_planner">Explore the GitLab project</a>
+          <a class="secondary-action" href="https://github.com/projecthelloworld-org/solarplanner" target="_blank" rel="noreferrer">Explore the GitHub project</a>
         </section>
 
         <section class="partners-band" id="partner-tools" aria-labelledby="partners-title">
@@ -159,11 +159,12 @@ if (app) {
               <span class="partner-link">Open locnet.io <span aria-hidden="true">&#8599;</span></span>
             </a>
 
-            <article class="partner-card partner-card-placeholder">
-              <span class="partner-index">02 / Open slot</span>
-              <h3>Partner tool coming soon</h3>
-              <p>This space is reserved for another open-source tool that supports community-led connectivity or infrastructure.</p>
-            </article>
+            <a class="partner-card partner-card-active" href="https://meter.giga.global/" target="_blank" rel="noreferrer">
+              <span class="partner-index">02 / Connectivity monitoring</span>
+              <h3>Giga Meter</h3>
+              <p>Monitor school internet quality with automated speed tests, visualize connectivity performance over time, and contribute measurements that help guide infrastructure improvements.</p>
+              <span class="partner-link">Open Giga Meter <span aria-hidden="true">&#8599;</span></span>
+            </a>
 
             <article class="partner-card partner-card-placeholder">
               <span class="partner-index">03 / Open slot</span>
@@ -189,7 +190,7 @@ if (app) {
         </div>
         <div class="footer-links">
           <a href="/solar/">Solar Planner</a>
-          <a href="https://os.myhellohub.org/helloworld/solar_planner">Source</a>
+          <a href="https://github.com/projecthelloworld-org/solarplanner" target="_blank" rel="noreferrer">Source</a>
           <a href="https://www.projecthelloworld.org/">Project Hello World</a>
           <a href="https://myhellohub.org/">My Hello Hub</a>
         </div>
