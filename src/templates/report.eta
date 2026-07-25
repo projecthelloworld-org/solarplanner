@@ -25,7 +25,7 @@
     </p>
   </section>
 
-  <section class="report-section">
+  <section class="report-section project-summary-section">
     <h2>Project Summary</h2>
     <div class="report-grid">
       <p><strong>Country</strong><span><%= it.project.country %></span></p>
@@ -39,7 +39,7 @@
     </div>
   </section>
 
-  <section class="report-section">
+  <section class="report-section load-table-section">
     <h2>Load Table</h2>
     <table class="report-table compact-table">
       <thead>
@@ -79,7 +79,7 @@
     </table>
   </section>
 
-  <section class="report-section">
+  <section class="report-section technical-section">
     <h2>Technical Sizing Summary</h2>
     <table class="report-table">
       <thead>
@@ -113,7 +113,7 @@
     </table>
   </section>
 
-  <section class="report-section">
+  <section class="report-section equipment-section">
     <h2>Generated / Edited Equipment Plan</h2>
     <table class="report-table">
       <thead>
@@ -251,7 +251,7 @@
       </div>
   </section>
 
-  <section class="report-section">
+  <section class="report-section assumptions-section">
     <h2>Assumptions</h2>
     <div class="assumption-list">
       <p><strong>DC distribution efficiency</strong><span><%= it.formatPercent(it.assumptions.dcDistributionEfficiency) %></span></p>
