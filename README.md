@@ -9,7 +9,7 @@ It converts an editable electrical load table into two planning options:
 
 The planner estimates energy demand, battery storage, solar array capacity, charge-controller current, inverter capacity, equipment adequacy, and project costs. It also generates a printable report and a spreadsheet-friendly CSV export.
 
-Current supported release: **v1.0.0**
+Current supported release: **v1.0.1**
 
 > Hello Solar Planner provides planning estimates, not certified electrical design. A qualified solar/electrical technician must review the final design and installation.
 

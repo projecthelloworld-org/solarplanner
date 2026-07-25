@@ -8,6 +8,15 @@ The project follows [Semantic Versioning](https://semver.org/). Release tags use
 
 Use this section for changes that have not yet been included in a tagged release.
 
+## 1.0.1 - 2026-07-25
+
+### Fixed
+
+- Equipment quantities, capacities, prices, exchange rates, and sizing assumptions can now be edited without the application rerendering on every keystroke.
+- Equipment accordions and the user's page position remain stable when an edited value is committed.
+- Printable reports now use consistent A4 margins and keep technical, equipment, recommendation, and financial tables together where they fit.
+- Report headings no longer become separated from their tables, and the report footer no longer creates a blank trailing page.
+
 ## 1.0.0 - 2026-07-15
 
 First supported open-source release.

@@ -46,14 +46,14 @@ docker compose config
 8. Create an annotated tag:
 
 ```bash
-git tag -a v1.0.0 -m "Hello Solar Planner v1.0.0"
+git tag -a vX.Y.Z -m "Hello Solar Planner vX.Y.Z"
 ```
 
 9. Push the branch and tag:
 
 ```bash
 git push origin master
-git push origin v1.0.0
+git push origin vX.Y.Z
 ```
 
 10. Create a GitLab release from the tag using the corresponding changelog section.
