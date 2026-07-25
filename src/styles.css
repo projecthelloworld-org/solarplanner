@@ -1062,7 +1062,7 @@ footer {
 @media print {
   @page {
     size: A4;
-    margin: 12mm;
+    margin: 14mm 12mm 16mm;
   }
 
   html,
@@ -1070,12 +1070,16 @@ footer {
   #app {
     width: auto;
     height: auto;
+    margin: 0;
+    padding: 0;
     overflow: visible;
   }
 
   body {
     background: #fff;
     color: #111;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   .topbar,
@@ -1143,8 +1147,12 @@ footer {
   }
 
   .report-brief,
+  .technical-section,
+  .equipment-section,
   .option-section,
+  .financial-section,
   .cost-block,
+  .assumptions-section,
   .disclaimer {
     break-inside: avoid;
     page-break-inside: avoid;
@@ -1153,6 +1161,8 @@ footer {
   .report-document h2 {
     margin-bottom: 6pt;
     font-size: 12pt;
+    break-after: avoid;
+    page-break-after: avoid;
   }
 
   .report-document h3 {
@@ -1192,12 +1202,21 @@ footer {
   }
 
   table {
+    width: 100%;
     page-break-inside: auto;
   }
 
   tr {
     page-break-inside: avoid;
     break-inside: avoid;
+  }
+
+  .technical-section table,
+  .equipment-section table,
+  .option-section table,
+  .cost-block table {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
   thead {
@@ -1233,6 +1252,9 @@ footer {
   }
 
   footer {
-    margin-top: 14pt;
+    margin-top: 5pt;
+    font-size: 8pt;
+    break-before: avoid;
+    page-break-before: avoid;
   }
 }

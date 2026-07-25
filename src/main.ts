@@ -175,11 +175,38 @@ function activeProject(): Project {
   return state.projects.find((project) => project.id === state.activeProjectId) ?? state.projects[0];
 }
 
-function setActiveProject(project: Project) {
+interface EquipmentUiState {
+  openDetails: number[];
+  scrollPosition: number;
+}
+
+function captureEquipmentUiState(): EquipmentUiState {
+  const openDetails = Array.from(document.querySelectorAll<HTMLDetailsElement>(".equipment-panel details")).reduce<number[]>((open, detail, index) => {
+    if (detail.open) open.push(index);
+    return open;
+  }, []);
+
+  return { openDetails, scrollPosition: window.scrollY };
+}
+
+function restoreEquipmentUiState(uiState: EquipmentUiState) {
+  const details = document.querySelectorAll<HTMLDetailsElement>(".equipment-panel details");
+  uiState.openDetails.forEach((index) => {
+    const detail = details[index];
+    if (detail) detail.open = true;
+  });
+  window.scrollTo({ top: uiState.scrollPosition, behavior: "instant" });
+}
+
+function setActiveProject(project: Project, preserveEquipmentUi = false) {
+  const equipmentUiState = preserveEquipmentUi ? captureEquipmentUiState() : undefined;
+
   project.updatedAt = new Date().toISOString();
   state.projects = state.projects.map((item) => (item.id === project.id ? normalizeProject(project) : item));
   saveState();
   render();
+
+  if (equipmentUiState) restoreEquipmentUiState(equipmentUiState);
 }
 
 function currentPlan(project: Project, generatedPlan: EquipmentPlan): EquipmentPlan {
@@ -870,13 +897,10 @@ function bindEvents() {
       const project = clone(activeProject());
       const field = target.dataset.projectField as keyof Project;
       (project[field] as string | number) = numericFields.has(field) ? Number(target.value) : target.value;
-      setActiveProject(project);
+      setActiveProject(project, Boolean(target.closest(".equipment-panel")));
     };
 
     inputElement.addEventListener("change", updateProjectField);
-    if (inputElement instanceof HTMLInputElement && numericFields.has(inputElement.dataset.projectField as keyof Project)) {
-      inputElement.addEventListener("input", updateProjectField);
-    }
   });
 
   document.querySelector("[data-calculate-loads]")?.addEventListener("click", () => {
@@ -921,10 +945,9 @@ function bindEvents() {
       (plan[section] as unknown as Record<string, number>)[field] = Number(target.value);
       project.equipmentPlan = plan;
       project.equipmentPlanMode = "custom";
-      setActiveProject(project);
+      setActiveProject(project, true);
     };
 
-    inputElement.addEventListener("input", updateHardware);
     inputElement.addEventListener("change", updateHardware);
   });
 
@@ -932,7 +955,7 @@ function bindEvents() {
     const project = clone(activeProject());
     project.equipmentPlan = undefined;
     project.equipmentPlanMode = "generated";
-    setActiveProject(project);
+    setActiveProject(project, true);
   });
 
   document.querySelectorAll("[data-default-field]").forEach((inputElement) => {
@@ -941,7 +964,7 @@ function bindEvents() {
       const project = clone(activeProject());
       const field = target.dataset.defaultField as keyof EquipmentDefaults;
       project.equipmentDefaults[field] = Number(target.value);
-      setActiveProject(project);
+      setActiveProject(project, true);
     });
   });
 
@@ -951,10 +974,9 @@ function bindEvents() {
       const project = clone(activeProject());
       const field = target.dataset.pricingField as keyof PricingSettings;
       project.pricing[field] = Number(target.value);
-      setActiveProject(project);
+      setActiveProject(project, true);
     };
 
-    inputElement.addEventListener("input", updatePricing);
     inputElement.addEventListener("change", updatePricing);
   });
 
@@ -963,8 +985,10 @@ function bindEvents() {
       const target = event.target as HTMLInputElement;
       const field = target.dataset.assumptionField as keyof Assumptions;
       (state.assumptions[field] as number) = Number(target.value);
+      const equipmentUiState = captureEquipmentUiState();
       saveState();
       render();
+      restoreEquipmentUiState(equipmentUiState);
     });
   });
 
