@@ -36,7 +36,7 @@ export function generateEquipmentPlan(result: CalculationResult, defaults: Equip
     hybrid: {
       controllerCount: 1,
       mpptAmps: ceilTo(result.hybrid.recommendedMpptCurrentA, mpptAmpStep),
-      inverterCount: Math.max(1, Math.ceil(result.hybrid.recommendedInverterW / inverterWattStep)),
+      inverterCount: result.hybrid.recommendedInverterW > 0 ? Math.ceil(result.hybrid.recommendedInverterW / inverterWattStep) : 0,
       inverterWatts: inverterWattStep,
     },
     balance: {
@@ -53,8 +53,8 @@ export function getEquipmentActuals(plan: EquipmentPlan): EquipmentActuals {
   return {
     solarArrayW: plan.shared.panelCount * plan.shared.panelWatts,
     batteryWh: plan.shared.batteryCount * plan.shared.batteryVoltage * plan.shared.batteryAh,
-    dcMpptA: plan.dc.mpptAmps,
-    hybridMpptA: plan.hybrid.mpptAmps,
+    dcMpptA: plan.dc.controllerCount * plan.dc.mpptAmps,
+    hybridMpptA: plan.hybrid.controllerCount * plan.hybrid.mpptAmps,
     hybridInverterW: plan.hybrid.inverterCount * plan.hybrid.inverterWatts,
   };
 }
@@ -93,7 +93,7 @@ export function evaluateEquipmentPlan(result: CalculationResult, plan: Equipment
 
   return {
     systemId,
-    status: warnings.length === 0 ? "Pass" : "Needs attention",
+    status: warnings.length === 0 ? "Preliminary checks met" : "Needs attention",
     checks,
     warnings,
   };

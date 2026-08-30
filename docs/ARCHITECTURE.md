@@ -18,12 +18,15 @@ User input
 
 ```text
 src/
+  app/                    Persistence and saved-project normalization
   assets/                 Static assets bundled by Vite
   data/                   Default JSON data and sample project
   engine/                 Pure planning, equipment, and costing logic
+  exports/                Report and CSV generation
   templates/              Eta report template
   types/                  Shared TypeScript contracts
-  main.ts                 Application state, rendering, events, CSV/report orchestration
+  utils/                  Shared escaping, identifiers, and formatting
+  main.ts                 Application rendering, UI state, and event binding
   styles.css              Dashboard, report, responsive, and print styles
 ```
 
@@ -47,13 +50,25 @@ Creates system-specific cost lines and applies installation, contingency, and ex
 
 Creates explanatory Fully DC and Hybrid recommendation text.
 
+### `src/engine/planner.ts`
+
+Composes calculation, equipment, costing, and recommendation results into the bundle consumed by the dashboard and selected report. It keeps orchestration out of the DOM layer without duplicating formulas.
+
+### `src/app/persistence.ts`
+
+Owns the persisted state format, project normalization, schema version, recovery copy, and LocalStorage error handling. Its storage interface is injectable so these behaviors can be tested without a browser.
+
+### `src/exports/project-report.ts`
+
+Builds the selected printable Eta report and the spreadsheet-friendly CSV from the same planning bundle.
+
 ### `src/templates/report.eta`
 
 Defines the printable report structure. The report receives already-calculated data and should not become a second calculation engine.
 
 ### `src/main.ts`
 
-Currently owns application startup, state normalization, LocalStorage, dashboard rendering, event binding, report generation, and CSV export. This is functional for v1 but is the main refactor target for v2.
+Owns application startup, transient UI state, dashboard HTML rendering, table collection, and event binding. Saved-data normalization, persistence, planning orchestration, formatting, and report/CSV generation have been extracted. Panel renderers and event controllers remain the next structural extraction.
 
 ## Data Sources
 
@@ -80,7 +95,7 @@ The load table becomes the demand source of truth when the user clicks **Calcula
 
 The dashboard calculates both options. `selectedSystem` filters only report and CSV output.
 
-## v2 Target Structure
+## Remaining Target Structure
 
 The recommended v2 split is:
 
@@ -88,8 +103,8 @@ The recommended v2 split is:
 src/
   app/
     bootstrap.ts
-    state.ts
-    storage.ts
+    events.ts
+    persistence.ts
   components/
     project-panel.ts
     load-table.ts
@@ -98,12 +113,12 @@ src/
     report-gate.ts
   exports/
     csv.ts
-    report.ts
+    project-report.ts
   engine/
   templates/
   types/
   utils/
-    escape.ts
+    html.ts
     format.ts
 ```
 

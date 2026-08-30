@@ -8,6 +8,34 @@ The project follows [Semantic Versioning](https://semver.org/). Release tags use
 
 Use this section for changes that have not yet been included in a tagged release.
 
+## 1.1.0 - 2026-08-30
+
+### Changed
+
+- Updated starter equipment and sample-project prices to a dated Kenya/Uganda retail baseline.
+- Added regional pricing sources, limits, and a six-month refresh method in `docs/PRICING.md`.
+- Expanded the product roadmap to cover country price profiles, price ranges, source metadata, procurement, and lifecycle costing.
+- Replaced the overconfident `Pass` label with `Preliminary checks met` and retained the qualified-review warning.
+- Added central validation bounds for projects, loads, equipment, and sizing assumptions.
+- Added versioned browser storage and preserved unreadable saved data under a recovery key instead of deleting it.
+- Reworked CSV downloads to use a browser Blob and protected spreadsheet exports from formula injection.
+- Extracted persistence, project normalization, planning orchestration, formatting, and report/CSV assembly from `src/main.ts` into independently testable modules.
+
+### Fixed
+
+- Corrected Hybrid inverter sizing to use AC running load and a credible AC surge case rather than total DC + AC demand.
+- Counted total MPPT current across multiple controllers in equipment checks and exports.
+
+### Added
+
+- Added Vitest and regression coverage for calculations, sun-hour sensitivity, inverter sizing, controller totals, validation, and CSV serialization.
+- Added persistence recovery, schema-version, normalization, report export, and filename tests.
+- Added GitHub Actions verification for tests, production builds, and the deployment image while retaining GitLab CI support.
+
+### Security
+
+- Updated vulnerable transitive development dependencies; `npm audit` reports zero known vulnerabilities.
+
 ## 1.0.1 - 2026-07-25
 
 ### Fixed

@@ -210,6 +210,8 @@ Set:
 
 All unit prices are entered in USD. Converted totals use the exchange rate you enter.
 
+The values initially shown are dated Kenya/Uganda regional planning baselines, not supplier quotations. Confirm current local prices, delivery, taxes, warranty, and installation costs before procurement. See `docs/PRICING.md` for the baseline method and sources.
+
 ### Solar Panels
 
 Set:
@@ -311,12 +313,12 @@ It includes inverter sizing and AC distribution cost where needed.
 
 Each option shows a status:
 
-- **Pass**
+- **Preliminary checks met**
 - **Needs attention**
 
-### Pass
+### Preliminary Checks Met
 
-The edited/generated equipment can meet the calculated requirement.
+The edited/generated equipment meets the planner's high-level capacity comparisons. It does not mean the equipment is electrically compatible or that the installation is certified.
 
 ### Needs Attention
 
@@ -447,8 +449,8 @@ MPPT/controller current depends on:
 
 Hybrid inverter size depends on:
 
-- peak load
-- surge load
+- AC running load
+- the credible surge case across AC loads
 - inverter headroom factor
 
 ## Saving And Storage
@@ -460,6 +462,7 @@ This means:
 - saved projects are available in the same browser on the same device
 - clearing browser storage may remove saved projects
 - no login or server database is required
+- if saved data becomes unreadable, the planner preserves a recovery copy in browser storage and opens the sample project
 
 ## Recommended Workflow
 
@@ -470,7 +473,7 @@ This means:
 5. Review the KPI cards.
 6. Review both system options.
 7. Edit equipment quantities or prices if needed.
-8. Check whether each option shows **Pass** or **Needs attention**.
+8. Check whether each option shows **Preliminary checks met** or **Needs attention**.
 9. Choose the desired **System Option**.
 10. Click **Generate Report**.
 11. Print/save PDF or export CSV.

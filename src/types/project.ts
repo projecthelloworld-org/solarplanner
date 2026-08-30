@@ -154,7 +154,7 @@ export interface AdequacyCheck {
 
 export interface EquipmentEvaluation {
   systemId: SystemOptionId;
-  status: "Pass" | "Needs attention";
+  status: "Preliminary checks met" | "Needs attention";
   checks: AdequacyCheck[];
   warnings: string[];
 }
@@ -179,6 +179,8 @@ export interface CalculationResult {
   totalDailyWh: number;
   peakLoadW: number;
   surgeLoadW: number;
+  acPeakLoadW: number;
+  acSurgeLoadW: number;
   criticalDailyWh: number;
   dc: SystemSizing;
   hybrid: SystemSizing;

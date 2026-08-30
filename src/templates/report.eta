@@ -141,14 +141,14 @@
         <tr>
           <td>Fully DC MPPT/controller</td>
           <td><%= it.plan.dc.controllerCount %> controller(s) x <%= it.plan.dc.mpptAmps %> A</td>
-          <td><%= it.plan.dc.mpptAmps %> A</td>
+          <td><%= it.actuals.dcMpptA %> A total</td>
           <td>Requirement: <%= it.selectedSizing.recommendedMpptCurrentA %> A</td>
         </tr>
         <% } else { %>
         <tr>
           <td>Hybrid MPPT/controller</td>
           <td><%= it.plan.hybrid.controllerCount %> controller(s) x <%= it.plan.hybrid.mpptAmps %> A</td>
-          <td><%= it.plan.hybrid.mpptAmps %> A</td>
+          <td><%= it.actuals.hybridMpptA %> A total</td>
           <td>Requirement: <%= it.selectedSizing.recommendedMpptCurrentA %> A</td>
         </tr>
         <tr>
@@ -164,9 +164,12 @@
 
     <section class="report-section option-section">
       <h2><%= it.selectedRecommendation.name %></h2>
-      <p class="status-line <%= it.selectedEvaluation.status === "Pass" ? "pass" : "warn" %>">
+      <p class="status-line <%= it.selectedEvaluation.status === "Preliminary checks met" ? "pass" : "warn" %>">
         <strong>Status:</strong> <%= it.selectedEvaluation.status %>
       </p>
+      <% if (it.selectedEvaluation.warnings.length === 0) { %>
+        <p class="report-note">The equipment meets the preliminary aggregate capacity checks. Voltage topology, conductor sizing, protection, earthing, temperature, structural loading, and manufacturer compatibility are not certified by this status.</p>
+      <% } %>
       <% if (it.selectedEvaluation.warnings.length > 0) { %>
         <ul class="report-warning-list">
           <% it.selectedEvaluation.warnings.forEach((warning) => { %>

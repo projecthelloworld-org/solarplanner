@@ -6,9 +6,9 @@ const safeNumber = (value: number, fallback = 0): number => (Number.isFinite(val
 
 export function calculateLoadRows(project: Project): LoadCalculation[] {
   return project.loads.map((load) => {
-    const quantity = Math.max(0, safeNumber(load.quantity));
+    const quantity = Math.floor(Math.max(0, safeNumber(load.quantity)));
     const watts = Math.max(0, safeNumber(load.watts));
-    const hoursPerDay = Math.max(0, safeNumber(load.hoursPerDay));
+    const hoursPerDay = Math.min(24, Math.max(0, safeNumber(load.hoursPerDay)));
     const surgeMultiplier = Math.max(1, safeNumber(load.surgeMultiplier, 1));
     const runningWatts = quantity * watts;
 
@@ -23,8 +23,8 @@ export function calculateLoadRows(project: Project): LoadCalculation[] {
 
 function sizeSystem(
   adjustedDailyWh: number,
-  peakLoadW: number,
-  surgeLoadW: number,
+  inverterRunningW: number,
+  inverterSurgeW: number,
   project: Project,
   assumptions: Assumptions,
   includeInverter: boolean,
@@ -36,14 +36,14 @@ function sizeSystem(
     (adjustedDailyWh * autonomyDays * assumptions.batteryReserveFactor) / assumptions.batteryDepthOfDischarge;
   const recommendedSolarArrayW = (adjustedDailyWh / sunHours / assumptions.arrayDerateFactor) * assumptions.batteryReserveFactor;
   const recommendedMpptCurrentA = (recommendedSolarArrayW / systemVoltage) * assumptions.mpptSafetyFactor;
-  const inverterBase = Math.max(peakLoadW, surgeLoadW * 0.55);
+  const recommendedInverterW = Math.max(inverterRunningW * assumptions.inverterHeadroomFactor, inverterSurgeW);
 
   return {
     adjustedDailyWh: Math.round(adjustedDailyWh),
     requiredBatteryWh: roundUpTo(requiredBatteryWh, 100),
     recommendedSolarArrayW: roundUpTo(recommendedSolarArrayW, 10),
     recommendedMpptCurrentA: roundUpTo(recommendedMpptCurrentA, 5),
-    recommendedInverterW: includeInverter ? roundUpTo(inverterBase * assumptions.inverterHeadroomFactor, 100) : 0,
+    recommendedInverterW: includeInverter ? roundUpTo(recommendedInverterW, 100) : 0,
   };
 }
 
@@ -52,6 +52,9 @@ export function calculateProject(project: Project, assumptions: Assumptions): Ca
   const totalDailyWh = loadRows.reduce((sum, row) => sum + row.dailyWh, 0);
   const peakLoadW = loadRows.reduce((sum, row) => sum + row.runningWatts, 0);
   const surgeLoadW = Math.max(0, ...loadRows.map((row) => peakLoadW - row.runningWatts + row.surgeWatts));
+  const acLoadRows = loadRows.filter((row) => row.load.currentType === "AC");
+  const acPeakLoadW = acLoadRows.reduce((sum, row) => sum + row.runningWatts, 0);
+  const acSurgeLoadW = Math.max(0, ...acLoadRows.map((row) => acPeakLoadW - row.runningWatts + row.surgeWatts));
   const criticalDailyWh = loadRows.filter((row) => row.load.critical).reduce((sum, row) => sum + row.dailyWh, 0);
   const dcAdjustedWh = totalDailyWh / assumptions.dcDistributionEfficiency;
   const hybridAdjustedWh = loadRows.reduce((sum, row) => {
@@ -64,8 +67,10 @@ export function calculateProject(project: Project, assumptions: Assumptions): Ca
     totalDailyWh: Math.round(totalDailyWh),
     peakLoadW: Math.round(peakLoadW),
     surgeLoadW: Math.round(surgeLoadW),
+    acPeakLoadW: Math.round(acPeakLoadW),
+    acSurgeLoadW: Math.round(acSurgeLoadW),
     criticalDailyWh: Math.round(criticalDailyWh),
-    dc: sizeSystem(dcAdjustedWh, peakLoadW, surgeLoadW, project, assumptions, false),
-    hybrid: sizeSystem(hybridAdjustedWh, peakLoadW, surgeLoadW, project, assumptions, true),
+    dc: sizeSystem(dcAdjustedWh, 0, 0, project, assumptions, false),
+    hybrid: sizeSystem(hybridAdjustedWh, acPeakLoadW, acSurgeLoadW, project, assumptions, true),
   };
 }

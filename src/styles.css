@@ -25,9 +25,15 @@
   box-sizing: border-box;
 }
 
+#app {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
 body {
   margin: 0;
   min-width: 320px;
+  overflow-x: clip;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(247, 250, 249, 0.96) 32%),
     #f7faf9;
@@ -380,6 +386,36 @@ label span,
   gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.validation-summary,
+.persistence-notice {
+  border: 1px solid #dca39b;
+  border-radius: 7px;
+  background: #fff6f4;
+  color: #6f2f28;
+  font-size: 0.86rem;
+}
+
+.validation-summary {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+}
+
+.validation-summary ul {
+  margin: 6px 0 0;
+  padding-left: 20px;
+}
+
+.persistence-notice {
+  max-width: 1500px;
+  margin: 0 auto 16px;
+  padding: 10px 14px;
+}
+
+input:invalid,
+select:invalid {
+  border-color: #c96c61;
 }
 
 .table-wrap {

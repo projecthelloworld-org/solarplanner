@@ -106,7 +106,7 @@ system surge W = highest value of:
   peak load W - load running watts + load surge watts
 ```
 
-This is mainly used for Hybrid inverter sizing.
+The whole-system value is a dashboard demand indicator. Hybrid inverter sizing uses the equivalent running and surge values calculated from AC loads only.
 
 ### Critical Energy
 
@@ -203,16 +203,22 @@ Interpretation:
 
 ## Hybrid Inverter Sizing
 
-The Hybrid option sizes an inverter from peak load and estimated surge:
+The Hybrid option sizes an inverter from AC loads only. DC loads do not pass through the inverter and therefore do not increase its power rating.
 
 ```text
-inverter base W = max(peak load W, surge load W x 0.55)
-recommended inverter W = inverter base W x inverter headroom factor
+AC peak load W = sum(running watts for AC loads)
+AC surge load W = highest value of:
+  AC peak load W - AC load running watts + AC load surge watts
+
+recommended inverter W = max(
+  AC peak load W x inverter headroom factor,
+  AC surge load W
+)
 ```
 
 The result is rounded up to the next 100 W.
 
-The Fully DC option does not require an inverter.
+The Fully DC option does not require an inverter. A Hybrid project with no AC loads also has a zero inverter requirement.
 
 ## Generated Equipment
 
@@ -245,6 +251,8 @@ The side panel keeps equipment quantities, capacities, and prices together in ac
 
 Currency is folded by default. Solar Panels is open by default. Prices are entered as USD base unit prices, and totals are displayed in the selected project currency using the manual exchange rate.
 
+Starter prices use a dated, country-balanced Kenya/Uganda retail baseline. They remain editable planning assumptions rather than quotations. The methodology, sources, limitations, and refresh process are documented in `docs/PRICING.md`.
+
 ## Adequacy Checks
 
 Adequacy checks compare the current equipment plan against the calculated requirements.
@@ -253,10 +261,10 @@ The app checks:
 
 - current solar array W vs recommended solar array W
 - current battery Wh vs required LiFePO4 battery Wh
-- current MPPT/controller amps vs recommended MPPT current
+- total current capacity across the selected MPPT/controllers vs recommended MPPT current
 - current Hybrid inverter W vs recommended inverter size
 
-If all required values are met, the option shows **Pass**.
+If all required values are met, the option shows **Preliminary checks met**. This is a capacity comparison, not certification of component compatibility, protection, cable sizing, or installation design.
 
 If one or more values are below recommendation, the option shows **Needs attention** and lists specific warnings, for example:
 

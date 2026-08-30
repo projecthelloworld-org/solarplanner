@@ -1,10 +1,24 @@
 # Codebase Review And Improvement Roadmap
 
-Review date: 2026-07-15
+Review date: 2026-08-30
 
 ## Summary
 
-The v1 codebase has a sound small-app foundation: strict TypeScript, pure calculation modules, JSON defaults, a reproducible Vite build, and a static Docker deployment. The main risks are limited automated verification, a large UI entry module, direct HTML string rendering, and browser-only persistence.
+The v1 codebase has a sound small-app foundation: strict TypeScript, pure calculation modules, JSON defaults, a reproducible Vite build, and a static Docker deployment. The first hardening milestone now adds engine tests, central input validation, cautious adequacy language, safe CSV serialization, and recoverable versioned browser storage. The main remaining risks are a large UI entry module, direct HTML string rendering, incomplete browser-level verification, and browser-only persistence.
+
+## Completed Hardening Milestone
+
+Completed after the v1.0.1 review:
+
+- corrected Hybrid inverter sizing to use AC demand and credible AC surge
+- corrected multi-controller adequacy capacity
+- added Vitest with calculation, equipment, validation, and CSV tests
+- added numeric bounds and visible load-table validation feedback
+- blocked invalid efficiency and derate assumptions
+- added a browser storage schema version and recovery copy for unreadable state
+- replaced data-URI CSV export with Blob download and formula-injection protection
+- changed `Pass` to `Preliminary checks met`
+- updated Kenya/Uganda starter pricing and documented its evidence and limitations
 
 ## What Is Working Well
 
@@ -17,43 +31,52 @@ The v1 codebase has a sound small-app foundation: strict TypeScript, pure calcul
 
 ## Priority Improvements
 
-### 1. Add Automated Engine Tests
+### 1. Expand Automated Coverage
 
-Priority: highest for v2.
+Priority: highest remaining verification task.
 
-Add a lightweight test runner and cover:
+Vitest is now installed and covers core sizing, controller totals, validation, and CSV safety. Extend it to cover:
 
-- daily Wh, peak, surge, and critical load calculations
-- sun-hour effects on solar and MPPT sizing
 - autonomy effects on battery sizing
 - DC vs Hybrid efficiency behavior
-- equipment rounding and adequacy warnings
-- costing, exchange rate, installation, and contingency
+- additional costing edge cases and price-snapshot behavior
 - normalization of older LocalStorage projects
 
 Formula tests should use explicit fixtures with expected numeric outputs.
 
 ### 2. Split `src/main.ts`
 
-The file currently combines state, persistence, formatting, report/CSV orchestration, HTML rendering, table collection, and event binding.
+Status: in progress. The first extraction reduced `src/main.ts` from 1,158 to about 750 lines.
+
+Completed:
+
+- shared escaping, cloning, identifiers, and formatting under `utils/`
+- saved-state normalization and persistence under `app/persistence.ts`
+- planning bundle orchestration under `engine/planner.ts`
+- report and CSV assembly under `exports/project-report.ts`
+- interface-level tests for persistence recovery and report exports
+
+Remaining:
+
+- panel renderers under `components/`
+- event controllers and bootstrap under `app/`
 
 Recommended extraction order:
 
-1. `utils/escape.ts` and `utils/format.ts`
-2. `app/storage.ts` and `app/state.ts`
-3. `exports/csv.ts` and `exports/report.ts`
-4. panel renderers under `components/`
-5. event controllers under `app/`
+1. Completed: `utils/html.ts` and `utils/format.ts`
+2. Completed: `app/persistence.ts`
+3. Completed: `engine/planner.ts`, `exports/csv.ts`, and `exports/project-report.ts`
+4. Next: panel renderers under `components/`
+5. Then: event controllers and bootstrap under `app/`
 
 Keep the no-framework approach, but make each module independently testable.
 
 ### 3. Harden Rendering And Validation
 
 - Escape all user-controlled text before inserting it into HTML.
-- Add central numeric bounds and validation messages.
+- Extend central validation to imported project files when portability is added.
 - Validate imported or migrated project data against a schema.
-- Prevent zero/invalid efficiency values from producing infinite results.
-- Add a visible recovery path when LocalStorage is corrupted or unavailable.
+- Add a user-facing recovery download/import action for preserved LocalStorage data.
 
 ### 4. Add Project Portability
 
@@ -73,22 +96,48 @@ LocalStorage is convenient but device-specific. Add JSON project export/import b
 - Add a Docker image build job once the GitLab runner supports container builds.
 - Publish release notes and immutable tags.
 
+### 7. Make Pricing Regional, Traceable, And Maintainable
+
+The v1 defaults now use a dated Kenya/Uganda retail baseline documented in `docs/PRICING.md`. This is more representative than the original generic USD values, but it remains a planning estimate.
+
+Next steps:
+
+- store price profile, country, source date, tax status, and source references with catalogue data
+- provide separate Kenya, Uganda, and custom price profiles instead of one blended baseline
+- distinguish verified products from broad balance-of-system allowances
+- define the contents of distribution, cabling, earthing, and monitoring kits before presenting them as comparable unit prices
+- record low, typical, and high prices so reports can show a cost range instead of false precision
+- add price age warnings and a documented six-month review cycle
+- preserve the price snapshot used by each project and report
+- support local-currency source prices without repeatedly converting rounded USD values
+- add delivery, taxes, remote-site logistics, installation, and replacement costs as explicit fields
+
 ## Suggested v2 Milestones
 
 ### v2.0 Foundation
 
 - module split
-- test runner and engine coverage
-- schema versioning and migrations
-- safe HTML utilities and validation
+- broader engine and browser coverage
+- formal schema migrations beyond the current storage version marker
+- complete safe-rendering audit
+- project-specific assumption and price snapshots
 
 ### v2.1 Portability
 
 - project JSON import/export
 - reusable project templates
 - optional localization support
+- Kenya, Uganda, and custom price profiles with dated source metadata
 
-### v2.2 Collaboration
+### v2.2 Procurement And Lifecycle Costing
+
+- product catalogue with manufacturer, model, warranty, ratings, and supplier references
+- low/typical/high market price ranges
+- component-based balance-of-system bills of materials
+- shipping, tax, installation, maintenance, and battery replacement costs
+- quote comparison and procurement-ready exports
+
+### v2.3 Collaboration
 
 - optional backend adapter
 - authenticated shared projects

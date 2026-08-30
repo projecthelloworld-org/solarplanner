@@ -17,15 +17,15 @@
     "inverterWattStep": 500
   },
   "pricing": {
-    "panelUnitUsd": 245,
-    "batteryUnitUsd": 560,
-    "controllerUnitUsd": 260,
-    "inverterUnitUsd": 690,
-    "dcDistributionUnitUsd": 180,
-    "acDistributionUnitUsd": 220,
-    "cablingUnitUsd": 210,
-    "earthingUnitUsd": 190,
-    "monitoringUnitUsd": 155
+    "panelUnitUsd": 80,
+    "batteryUnitUsd": 500,
+    "controllerUnitUsd": 150,
+    "inverterUnitUsd": 460,
+    "dcDistributionUnitUsd": 100,
+    "acDistributionUnitUsd": 90,
+    "cablingUnitUsd": 140,
+    "earthingUnitUsd": 140,
+    "monitoringUnitUsd": 150
   },
   "equipmentPlanMode": "generated",
   "updatedAt": "2026-05-19T00:00:00.000Z",

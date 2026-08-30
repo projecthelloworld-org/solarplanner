@@ -49,14 +49,16 @@ docker compose config
 git tag -a vX.Y.Z -m "Hello Solar Planner vX.Y.Z"
 ```
 
-9. Push the branch and tag:
+9. Push the branch and tag to both maintained repositories:
 
 ```bash
 git push origin master
 git push origin vX.Y.Z
+git push upstream master
+git push upstream vX.Y.Z
 ```
 
-10. Create a GitLab release from the tag using the corresponding changelog section.
+10. Create GitLab and GitHub releases from the same immutable tag using the corresponding changelog section.
 
 ## Hotfixes
 

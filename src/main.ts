@@ -1,15 +1,14 @@
-import { Eta } from "eta";
 import "./styles.css";
 import solarPlannerLogoUrl from "./assets/solar_planner_logo.svg";
-import assumptionsData from "./data/assumptions.json";
 import brandProfilesData from "./data/brand-profiles.json";
-import productsData from "./data/default-products.json";
 import sampleProjectData from "./data/sample-project.json";
+import { loadAppState, normalizeProject, saveAppState } from "./app/persistence";
 import { calculateProject } from "./engine/calculations";
-import { estimateCosts } from "./engine/costing";
-import { evaluateEquipmentPlan, generateEquipmentPlan, getEquipmentActuals } from "./engine/equipment";
-import { buildRecommendations } from "./engine/recommendations";
-import reportTemplate from "./templates/report.eta?raw";
+import { generateEquipmentPlan } from "./engine/equipment";
+import { currentPlan, getProjectBundle } from "./engine/planner";
+import { validateAssumptions, validateEquipmentPlan, validateProject, type ValidationIssue } from "./engine/validation";
+import { createCsvObjectUrl } from "./exports/csv";
+import { buildProjectCsv, projectCsvFilename, renderProjectReport } from "./exports/project-report";
 import type {
   Assumptions,
   BrandProfile,
@@ -17,158 +16,22 @@ import type {
   EquipmentEvaluation,
   EquipmentPlan,
   PricingSettings,
-  ProductCatalog,
   Project,
-  SystemOptionId,
 } from "./types/project";
+import { attribute, clone, escapeHtml, uid } from "./utils/html";
+import { formatEnergy, integerFormat, money, moneyUsd, selectedSystemFor, systemOptionName } from "./utils/format";
 
-type AppState = {
-  activeProjectId: string;
-  projects: Project[];
-  assumptions: Assumptions;
-  products: ProductCatalog;
-};
-
-const STORAGE_KEY = "hello-solar-planner-state";
-const eta = new Eta();
 const app = document.querySelector<HTMLDivElement>("#app");
 const brands = brandProfilesData as BrandProfile[];
-const defaultProducts = productsData as ProductCatalog;
 const currencyOptions = ["USD", "UGX", "KES", "TZS", "RWF", "BIF", "ZMW", "MWK", "ETB", "GHS", "NGN", "EUR", "GBP"];
-
-const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
-const uid = () => crypto.randomUUID?.() ?? `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-const integerFormat = new Intl.NumberFormat("en", { maximumFractionDigits: 0 });
-const decimalFormat = new Intl.NumberFormat("en", { maximumFractionDigits: 2 });
-const toCents = (value: number): number => Math.round(value * 100) / 100;
-
-const defaultEquipmentDefaults: EquipmentDefaults = {
-  panelWatts: 450,
-  batteryVoltage: 24,
-  batteryAh: 100,
-  mpptAmpStep: 10,
-  inverterWattStep: 500,
-};
-
-function selectedSystemFor(project: Project): SystemOptionId {
-  return project.selectedSystem === "dc" || project.selectedSystem === "hybrid" ? project.selectedSystem : "dc";
-}
-
-function systemOptionName(systemId: SystemOptionId) {
-  return systemId === "dc" ? "Fully DC System" : "Hybrid DC + AC System";
-}
-
-const defaultPricing: PricingSettings = {
-  panelUnitUsd: defaultProducts.solarPanels[1]?.unitCost ?? 245,
-  batteryUnitUsd: defaultProducts.batteries[1]?.unitCost ?? 560,
-  controllerUnitUsd: defaultProducts.chargeControllers[1]?.unitCost ?? 260,
-  inverterUnitUsd: defaultProducts.hybridInverters[1]?.unitCost ?? 690,
-  dcDistributionUnitUsd: defaultProducts.dcDistribution[0]?.unitCost ?? 180,
-  acDistributionUnitUsd: defaultProducts.acDistribution[0]?.unitCost ?? 220,
-  cablingUnitUsd: defaultProducts.cabling[0]?.unitCost ?? 210,
-  earthingUnitUsd: defaultProducts.earthing[0]?.unitCost ?? 190,
-  monitoringUnitUsd: defaultProducts.monitoring[0]?.unitCost ?? 155,
-};
-
-function normalizePricing(rawPricing: Partial<PricingSettings> & Record<string, unknown> = {}): PricingSettings {
-  return {
-    panelUnitUsd: toCents(Number(rawPricing.panelUnitUsd ?? Number(rawPricing.panelUsdPerW ?? 0) * defaultEquipmentDefaults.panelWatts) || defaultPricing.panelUnitUsd),
-    batteryUnitUsd:
-      toCents(
-        Number(rawPricing.batteryUnitUsd ?? Number(rawPricing.batteryUsdPerWh ?? 0) * defaultEquipmentDefaults.batteryVoltage * defaultEquipmentDefaults.batteryAh) ||
-          defaultPricing.batteryUnitUsd,
-      ),
-    controllerUnitUsd: toCents(Number(rawPricing.controllerUnitUsd ?? rawPricing.chargeControllerUsd) || defaultPricing.controllerUnitUsd),
-    inverterUnitUsd: toCents(Number(rawPricing.inverterUnitUsd ?? Number(rawPricing.inverterUsdPerW ?? 0) * defaultEquipmentDefaults.inverterWattStep) || defaultPricing.inverterUnitUsd),
-    dcDistributionUnitUsd: toCents(Number(rawPricing.dcDistributionUnitUsd ?? rawPricing.dcDistributionUsd) || defaultPricing.dcDistributionUnitUsd),
-    acDistributionUnitUsd: toCents(Number(rawPricing.acDistributionUnitUsd ?? rawPricing.acDistributionUsd) || defaultPricing.acDistributionUnitUsd),
-    cablingUnitUsd: toCents(Number(rawPricing.cablingUnitUsd ?? rawPricing.cablingUsd) || defaultPricing.cablingUnitUsd),
-    earthingUnitUsd: toCents(Number(rawPricing.earthingUnitUsd ?? rawPricing.earthingUsd) || defaultPricing.earthingUnitUsd),
-    monitoringUnitUsd: toCents(Number(rawPricing.monitoringUnitUsd ?? rawPricing.monitoringUsd) || defaultPricing.monitoringUnitUsd),
-  };
-}
-
-function normalizeEquipmentPlan(plan: Project["equipmentPlan"]): Project["equipmentPlan"] {
-  if (!plan) return undefined;
-
-  return {
-    shared: {
-      panelCount: plan.shared?.panelCount ?? 1,
-      panelWatts: plan.shared?.panelWatts ?? defaultEquipmentDefaults.panelWatts,
-      batteryCount: plan.shared?.batteryCount ?? 1,
-      batteryVoltage: plan.shared?.batteryVoltage ?? defaultEquipmentDefaults.batteryVoltage,
-      batteryAh: plan.shared?.batteryAh ?? defaultEquipmentDefaults.batteryAh,
-    },
-    dc: {
-      controllerCount: plan.dc?.controllerCount ?? 1,
-      mpptAmps: plan.dc?.mpptAmps ?? defaultEquipmentDefaults.mpptAmpStep,
-    },
-    hybrid: {
-      controllerCount: plan.hybrid?.controllerCount ?? 1,
-      mpptAmps: plan.hybrid?.mpptAmps ?? defaultEquipmentDefaults.mpptAmpStep,
-      inverterCount: plan.hybrid?.inverterCount ?? 1,
-      inverterWatts: plan.hybrid?.inverterWatts ?? defaultEquipmentDefaults.inverterWattStep,
-    },
-    balance: {
-      dcDistributionCount: plan.balance?.dcDistributionCount ?? 1,
-      acDistributionCount: plan.balance?.acDistributionCount ?? 1,
-      cablingCount: plan.balance?.cablingCount ?? 1,
-      earthingCount: plan.balance?.earthingCount ?? 1,
-      monitoringCount: plan.balance?.monitoringCount ?? 1,
-    },
-  };
-}
-
-function normalizeProject(rawProject: Partial<Project>): Project {
-  const fallback = clone(sampleProjectData) as Project;
-  const project = { ...fallback, ...rawProject } as Project;
-  const loads = project.loads ?? fallback.loads;
-
-  return {
-    ...project,
-    currency: project.currency || "USD",
-    usdExchangeRate: Number.isFinite(project.usdExchangeRate) && project.usdExchangeRate > 0 ? project.usdExchangeRate : 1,
-    selectedSystem: project.selectedSystem === "dc" || project.selectedSystem === "hybrid" ? project.selectedSystem : "dc",
-    equipmentDefaults: { ...defaultEquipmentDefaults, ...(project.equipmentDefaults ?? {}) },
-    pricing: normalizePricing(project.pricing as Partial<PricingSettings> & Record<string, unknown>),
-    equipmentPlanMode: project.equipmentPlanMode ?? "generated",
-    equipmentPlan: normalizeEquipmentPlan(project.equipmentPlan),
-    loads,
-    updatedAt: project.updatedAt ?? new Date().toISOString(),
-  };
-}
-
-function loadState(): AppState {
-  const fallbackProject = normalizeProject(clone(sampleProjectData) as Project);
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved) as Partial<AppState>;
-      const projects = (parsed.projects ?? [fallbackProject]).map((project) => normalizeProject(project));
-      return {
-        activeProjectId: parsed.activeProjectId ?? projects[0].id,
-        projects,
-        assumptions: { ...(assumptionsData as Assumptions), ...(parsed.assumptions ?? {}) },
-        products: { ...defaultProducts, ...(parsed.products ?? {}) },
-      };
-    }
-  } catch {
-    localStorage.removeItem(STORAGE_KEY);
-  }
-
-  return {
-    activeProjectId: fallbackProject.id,
-    projects: [fallbackProject],
-    assumptions: assumptionsData as Assumptions,
-    products: defaultProducts,
-  };
-}
-
-let state = loadState();
+const loaded = loadAppState(localStorage);
+let state = loaded.state;
+let persistenceNotice = loaded.notice;
 let reportVisible = false;
+let csvObjectUrl = "";
 
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  persistenceNotice = saveAppState(state, localStorage);
 }
 
 function activeProject(): Project {
@@ -209,28 +72,8 @@ function setActiveProject(project: Project, preserveEquipmentUi = false) {
   if (equipmentUiState) restoreEquipmentUiState(equipmentUiState);
 }
 
-function currentPlan(project: Project, generatedPlan: EquipmentPlan): EquipmentPlan {
-  return project.equipmentPlanMode === "custom" && project.equipmentPlan ? project.equipmentPlan : generatedPlan;
-}
-
-function money(value: number, project = activeProject()) {
-  return `${project.currency} ${integerFormat.format(value)}`;
-}
-
-function moneyDetailed(value: number, project = activeProject()) {
-  return `${project.currency} ${decimalFormat.format(value)}`;
-}
-
-function moneyUsd(value: number) {
-  return `USD ${decimalFormat.format(value)}`;
-}
-
-function formatEnergy(wh: number) {
-  return wh >= 1000 ? `${decimalFormat.format(wh / 1000)} kWh` : `${integerFormat.format(wh)} Wh`;
-}
-
 function formatStatus(evaluation: EquipmentEvaluation) {
-  return `<span class="status-pill ${evaluation.status === "Pass" ? "pass" : "warn"}">${evaluation.status}</span>`;
+  return `<span class="status-pill ${evaluation.status === "Preliminary checks met" ? "pass" : "warn"}">${evaluation.status}</span>`;
 }
 
 const iconPaths: Record<string, string> = {
@@ -256,199 +99,6 @@ function icon(name: string) {
   return `<span class="ui-icon" aria-hidden="true"><svg viewBox="0 0 24 24" role="img">${paths}</svg></span>`;
 }
 
-function getProjectBundle(project: Project) {
-  const result = calculateProject(project, state.assumptions);
-  const generatedPlan = generateEquipmentPlan(result, project.equipmentDefaults);
-  const plan = currentPlan(project, generatedPlan);
-  const evaluations = {
-    dc: evaluateEquipmentPlan(result, plan, "dc"),
-    hybrid: evaluateEquipmentPlan(result, plan, "hybrid"),
-  };
-  const costs = [
-    estimateCosts(project, plan, project.pricing, state.assumptions, "dc"),
-    estimateCosts(project, plan, project.pricing, state.assumptions, "hybrid"),
-  ];
-
-  return {
-    result,
-    generatedPlan,
-    plan,
-    actuals: getEquipmentActuals(plan),
-    evaluations,
-    costs,
-    recommendations: buildRecommendations(project, result),
-  };
-}
-
-function getSelectedReportBundle(project: Project) {
-  const bundle = getProjectBundle(project);
-  const selectedSystem = selectedSystemFor(project);
-  const selectedSizing = selectedSystem === "dc" ? bundle.result.dc : bundle.result.hybrid;
-  const selectedEvaluation = selectedSystem === "dc" ? bundle.evaluations.dc : bundle.evaluations.hybrid;
-  const selectedCost = bundle.costs.find((estimate) => estimate.systemId === selectedSystem) ?? bundle.costs[0];
-  const selectedRecommendation = bundle.recommendations.find((option) => option.id === selectedSystem) ?? bundle.recommendations[0];
-
-  return {
-    ...bundle,
-    selectedSystem,
-    selectedSystemName: systemOptionName(selectedSystem),
-    selectedSizing,
-    selectedEvaluation,
-    selectedCost,
-    selectedRecommendation,
-  };
-}
-
-function renderReport(project: Project): string {
-  const bundle = getSelectedReportBundle(project);
-  const brand = brands.find((item) => item.id === project.brandProfileId) ?? brands[0];
-
-  return eta.renderString(reportTemplate, {
-    project,
-    ...bundle,
-    assumptions: state.assumptions,
-    brand,
-    generatedAt: new Date().toLocaleDateString("en", { year: "numeric", month: "short", day: "numeric" }),
-    money: (value: number) => money(value, project),
-    moneyDetailed: (value: number) => moneyDetailed(value, project),
-    moneyUsd,
-    formatEnergy,
-    formatNumber: (value: number) => integerFormat.format(value),
-    formatDecimal: (value: number) => decimalFormat.format(value),
-    formatPercent: (value: number) => `${Math.round(value * 100)}%`,
-  }) as string;
-}
-
-function csvCell(value: string | number | boolean | undefined) {
-  const text = value === undefined ? "" : String(value);
-  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-}
-
-function csvLine(values: Array<string | number | boolean | undefined>) {
-  return values.map(csvCell).join(",");
-}
-
-function buildCsvExport(project: Project) {
-  const bundle = getSelectedReportBundle(project);
-  const brand = brands.find((item) => item.id === project.brandProfileId) ?? brands[0];
-  const rows: Array<Array<string | number | boolean | undefined>> = [];
-  const selectedLines = bundle.selectedRecommendation.lines;
-
-  rows.push(["Project Summary"]);
-  rows.push(["Country", project.country]);
-  rows.push(["Currency", project.currency]);
-  rows.push(["USD exchange rate", `1 USD = ${decimalFormat.format(project.usdExchangeRate)} ${project.currency}`]);
-  rows.push(["System voltage", `${project.systemVoltage} V`]);
-  rows.push(["Sun hours", `${project.sunHours} h/day`]);
-  rows.push(["Autonomy", `${project.autonomyDays} day(s)`]);
-  rows.push(["Report option", bundle.selectedSystemName]);
-  rows.push(["Brand profile", brand.name]);
-  rows.push([]);
-
-  rows.push(["Load Table"]);
-  rows.push(["Load", "Qty", "W each", "h/day", "Type", "Voltage", "Surge", "Critical", "Daily Wh"]);
-  bundle.result.loadRows.forEach((row) => {
-    rows.push([
-      row.load.name,
-      row.load.quantity,
-      row.load.watts,
-      row.load.hoursPerDay,
-      row.load.currentType,
-      `${row.load.voltage} V`,
-      `${row.load.surgeMultiplier}x`,
-      row.load.critical ? "Yes" : "No",
-      Math.round(row.dailyWh),
-    ]);
-  });
-  rows.push(["Total daily energy", "", "", "", "", "", "", "", Math.round(bundle.result.totalDailyWh)]);
-  rows.push([]);
-
-  rows.push(["Technical Sizing Summary", bundle.selectedSystemName]);
-  rows.push(["Adjusted daily energy", formatEnergy(bundle.selectedSizing.adjustedDailyWh)]);
-  rows.push(["Required LiFePO4 battery", formatEnergy(bundle.selectedSizing.requiredBatteryWh)]);
-  rows.push(["Recommended solar array", `${integerFormat.format(bundle.selectedSizing.recommendedSolarArrayW)} W`]);
-  rows.push(["Recommended MPPT current", `${bundle.selectedSizing.recommendedMpptCurrentA} A`]);
-  rows.push(["Recommended inverter size", bundle.selectedSystem === "hybrid" ? `${integerFormat.format(bundle.selectedSizing.recommendedInverterW)} W` : "Not required"]);
-  rows.push([]);
-
-  rows.push(["Generated / Edited Equipment Plan"]);
-  rows.push(["Equipment", "Current plan", "Actual capacity", "Notes"]);
-  rows.push([
-    "Solar panels",
-    `${bundle.plan.shared.panelCount} panel(s) x ${bundle.plan.shared.panelWatts} W`,
-    `${integerFormat.format(bundle.actuals.solarArrayW)} W`,
-    `${integerFormat.format(bundle.selectedSizing.recommendedSolarArrayW)} W`,
-  ]);
-  rows.push([
-    "LiFePO4 batteries",
-    `${bundle.plan.shared.batteryCount} battery/batteries x ${bundle.plan.shared.batteryVoltage} V x ${bundle.plan.shared.batteryAh} Ah`,
-    formatEnergy(bundle.actuals.batteryWh),
-    formatEnergy(bundle.selectedSizing.requiredBatteryWh),
-  ]);
-  if (bundle.selectedSystem === "dc") {
-    rows.push(["DC MPPT/controller", `${bundle.plan.dc.controllerCount} controller(s) x ${bundle.plan.dc.mpptAmps} A`, `${bundle.plan.dc.mpptAmps} A`, `${bundle.selectedSizing.recommendedMpptCurrentA} A`]);
-  } else {
-    rows.push([
-      "Hybrid MPPT/controller",
-      `${bundle.plan.hybrid.controllerCount} controller(s) x ${bundle.plan.hybrid.mpptAmps} A`,
-      `${bundle.plan.hybrid.mpptAmps} A`,
-      `${bundle.selectedSizing.recommendedMpptCurrentA} A`,
-    ]);
-    rows.push([
-      "Hybrid inverter",
-      `${bundle.plan.hybrid.inverterCount} inverter(s) x ${bundle.plan.hybrid.inverterWatts} W`,
-      `${integerFormat.format(bundle.actuals.hybridInverterW)} W`,
-      `${integerFormat.format(bundle.selectedSizing.recommendedInverterW)} W`,
-    ]);
-  }
-  rows.push([]);
-
-  rows.push([bundle.selectedRecommendation.name]);
-  rows.push(["Status", bundle.selectedEvaluation.status]);
-  if (bundle.selectedEvaluation.warnings.length > 0) {
-    bundle.selectedEvaluation.warnings.forEach((warning) => rows.push(["Warning", warning]));
-  }
-  rows.push(["Summary", bundle.selectedRecommendation.summary]);
-  rows.push(["Category", "Recommendation", "Rationale"]);
-  selectedLines.forEach((line) => rows.push([line.category, line.recommendation, line.rationale]));
-  rows.push([]);
-
-  rows.push(["Financial Summary", bundle.selectedSystemName]);
-  rows.push([`${bundle.selectedSystemName} option`, money(bundle.selectedCost.total, project)]);
-  rows.push([]);
-  rows.push([`${bundle.selectedSystemName} Cost Detail`]);
-  rows.push(["Category", "Description", "Qty", "Unit cost", "Total"]);
-  bundle.selectedCost.lines.forEach((line) => {
-    rows.push([line.category, line.description, line.quantity, `${moneyDetailed(line.unitCost, project)} (${moneyUsd(line.unitCostUsd)})`, money(line.total, project)]);
-  });
-  rows.push(["Installation", "Planning allowance based on editable assumption", 1, `${Math.round(state.assumptions.installationRate * 100)}%`, money(bundle.selectedCost.installation, project)]);
-  rows.push(["Contingency", "Planning allowance for local variance and missing items", 1, `${Math.round(state.assumptions.contingencyRate * 100)}%`, money(bundle.selectedCost.contingency, project)]);
-  rows.push(["Estimated total", "", "", "", `${money(bundle.selectedCost.total, project)} (${moneyUsd(bundle.selectedCost.totalUsd)})`]);
-
-  return rows.map(csvLine).join("\n");
-}
-
-function csvFilename(project: Project) {
-  return `${project.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "hello-solar-report"}-report.csv`;
-}
-
-function csvDownloadHref(project: Project) {
-  return `data:text/csv;charset=utf-8,${encodeURIComponent(`\uFEFF${buildCsvExport(project)}`)}`;
-}
-
-function escapeHtml(value: string | number) {
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-function attribute(value: string | number) {
-  return escapeHtml(value);
-}
-
 function input(label: string, attrs: string, value: string | number) {
   return `
     <label>
@@ -468,9 +118,9 @@ function renderProjectPanel(project: Project) {
       <div class="form-grid">
         ${input("Project name", 'type="text" data-project-field="name"', project.name)}
         ${input("Country", 'type="text" data-project-field="country"', project.country)}
-        ${input("System voltage", 'type="number" min="12" step="12" data-project-field="systemVoltage"', project.systemVoltage)}
-        ${input("Sun hours", 'type="number" min="0.5" step="0.1" data-project-field="sunHours"', project.sunHours)}
-        ${input("Autonomy days", 'type="number" min="0.5" step="0.5" data-project-field="autonomyDays"', project.autonomyDays)}
+        ${input("System voltage", 'type="number" min="12" max="100" step="1" data-project-field="systemVoltage"', project.systemVoltage)}
+        ${input("Sun hours", 'type="number" min="0.5" max="24" step="0.1" data-project-field="sunHours"', project.sunHours)}
+        ${input("Autonomy days", 'type="number" min="0.5" max="30" step="0.5" data-project-field="autonomyDays"', project.autonomyDays)}
         <label>
           <span>System Option</span>
           <select data-project-field="selectedSystem">
@@ -505,7 +155,7 @@ function renderLoadRows(project: Project) {
         </td>
         <td><input aria-label="Quantity" type="number" min="0" step="1" data-load-id="${attribute(load.id)}" data-load-field="quantity" value="${attribute(load.quantity)}" /></td>
         <td><input aria-label="Watts" type="number" min="0" step="1" data-load-id="${attribute(load.id)}" data-load-field="watts" value="${attribute(load.watts)}" /></td>
-        <td><input aria-label="Hours per day" type="number" min="0" step="0.25" data-load-id="${attribute(load.id)}" data-load-field="hoursPerDay" value="${attribute(load.hoursPerDay)}" /></td>
+        <td><input aria-label="Hours per day" type="number" min="0" max="24" step="0.25" data-load-id="${attribute(load.id)}" data-load-field="hoursPerDay" value="${attribute(load.hoursPerDay)}" /></td>
         <td>
           <select aria-label="Current type" data-load-id="${attribute(load.id)}" data-load-field="currentType">
             <option value="DC" ${load.currentType === "DC" ? "selected" : ""}>DC</option>
@@ -677,7 +327,13 @@ function renderSideControls(project: Project, plan: EquipmentPlan, evaluations: 
               ["installationRate", "Installation rate"],
               ["contingencyRate", "Contingency rate"],
             ]
-              .map(([field, label]) => numberField(label, `type="number" min="0" max="3" step="0.01" data-assumption-field="${field}"`, state.assumptions[field as keyof Assumptions] as number))
+              .map(([field, label]) => {
+                const factorFields = new Set(["batteryReserveFactor", "mpptSafetyFactor", "inverterHeadroomFactor"]);
+                const rateFields = new Set(["installationRate", "contingencyRate"]);
+                const min = factorFields.has(field) ? 1 : rateFields.has(field) ? 0 : 0.01;
+                const max = factorFields.has(field) ? 3 : 1;
+                return numberField(label, `type="number" min="${min}" max="${max}" step="0.01" data-assumption-field="${field}"`, state.assumptions[field as keyof Assumptions] as number);
+              })
               .join("")}
           </div>
         </details>
@@ -687,7 +343,9 @@ function renderSideControls(project: Project, plan: EquipmentPlan, evaluations: 
 }
 
 function renderWarnings(evaluation: EquipmentEvaluation) {
-  if (evaluation.warnings.length === 0) return `<p class="pass-note">This option can handle the calculated load.</p>`;
+  if (evaluation.warnings.length === 0) {
+    return `<p class="pass-note">The current equipment meets the preliminary capacity checks. Electrical compatibility and installation design still require qualified review.</p>`;
+  }
 
   return `
     <ul class="warning-list">
@@ -697,7 +355,7 @@ function renderWarnings(evaluation: EquipmentEvaluation) {
 }
 
 function renderPlanner(project: Project) {
-  const { result, generatedPlan, plan, evaluations, costs, recommendations } = getProjectBundle(project);
+  const { result, generatedPlan, plan, evaluations, costs, recommendations } = getProjectBundle(project, state.assumptions);
   const [dcCost, hybridCost] = costs;
   const selectedSystem = selectedSystemFor(project);
 
@@ -727,6 +385,7 @@ function renderPlanner(project: Project) {
               <button type="button" data-add-load>Add load</button>
             </div>
           </div>
+          <div class="validation-summary" data-validation-summary role="alert" tabindex="-1" hidden></div>
           <div class="table-wrap">
             <table class="editable-table">
               <thead>
@@ -799,10 +458,10 @@ function renderPlanner(project: Project) {
             </div>
             <div class="report-actions">
               <button type="button" data-print>Print / Save PDF</button>
-              <a class="button-link" href="${attribute(csvDownloadHref(project))}" download="${attribute(csvFilename(project))}" target="_blank" rel="noopener" data-export-csv>Export CSV</a>
+              <a class="button-link" href="#" data-export-csv>Export CSV</a>
             </div>
           </div>
-          <div id="report">${renderReport(project)}</div>
+          <div id="report">${renderProjectReport(project, state.assumptions, brands)}</div>
         </div>
       `
           : `
@@ -822,6 +481,11 @@ function renderPlanner(project: Project) {
 
 function render() {
   if (!app) return;
+
+  if (csvObjectUrl) {
+    URL.revokeObjectURL(csvObjectUrl);
+    csvObjectUrl = "";
+  }
 
   const project = activeProject();
   const brand = brands.find((item) => item.id === project.brandProfileId) ?? brands[0];
@@ -845,6 +509,7 @@ function render() {
           <button type="button" data-load-sample>Sample</button>
         </div>
       </header>
+      ${persistenceNotice ? `<div class="persistence-notice" role="status">${escapeHtml(persistenceNotice)}</div>` : ""}
       ${renderPlanner(project)}
     </div>
   `;
@@ -883,6 +548,28 @@ function collectLoadTable(project: Project): Project["loads"] {
   });
 }
 
+function showValidationIssues(issues: ValidationIssue[]) {
+  const summary = document.querySelector<HTMLElement>("[data-validation-summary]");
+  if (!summary) return;
+
+  if (issues.length === 0) {
+    summary.hidden = true;
+    summary.innerHTML = "";
+    return;
+  }
+
+  summary.innerHTML = `<strong>Check the load table before calculating:</strong><ul>${issues.map((issue) => `<li>${escapeHtml(issue.message)}</li>`).join("")}</ul>`;
+  summary.hidden = false;
+  summary.focus();
+}
+
+function controlIsValid(target: HTMLInputElement | HTMLSelectElement): boolean {
+  target.setCustomValidity("");
+  if (target.checkValidity()) return true;
+  target.reportValidity();
+  return false;
+}
+
 function bindEvents() {
   document.querySelector("[data-project-switch]")?.addEventListener("change", (event) => {
     state.activeProjectId = (event.target as HTMLSelectElement).value;
@@ -894,6 +581,7 @@ function bindEvents() {
     const numericFields = new Set<keyof Project>(["systemVoltage", "sunHours", "autonomyDays", "usdExchangeRate"]);
     const updateProjectField = (event: Event) => {
       const target = event.target as HTMLInputElement | HTMLSelectElement;
+      if (!controlIsValid(target)) return;
       const project = clone(activeProject());
       const field = target.dataset.projectField as keyof Project;
       (project[field] as string | number) = numericFields.has(field) ? Number(target.value) : target.value;
@@ -906,6 +594,12 @@ function bindEvents() {
   document.querySelector("[data-calculate-loads]")?.addEventListener("click", () => {
     const project = clone(activeProject());
     project.loads = collectLoadTable(project);
+    const issues = [...validateProject(project), ...validateAssumptions(state.assumptions)];
+    if (issues.length > 0) {
+      showValidationIssues(issues);
+      return;
+    }
+    showValidationIssues([]);
     setActiveProject(project);
   });
 
@@ -937,12 +631,19 @@ function bindEvents() {
   document.querySelectorAll("[data-hardware-field]").forEach((inputElement) => {
     const updateHardware = (event: Event) => {
       const target = event.target as HTMLInputElement;
+      if (!controlIsValid(target)) return;
       const project = clone(activeProject());
       const generatedPlan = generateEquipmentPlan(calculateProject(project, state.assumptions), project.equipmentDefaults);
       const plan = clone(currentPlan(project, generatedPlan));
       const section = target.dataset.hardwareSection as keyof EquipmentPlan;
       const field = target.dataset.hardwareField ?? "";
       (plan[section] as unknown as Record<string, number>)[field] = Number(target.value);
+      const issue = validateEquipmentPlan(plan).find((item) => item.path === `${section}.${field}`);
+      if (issue) {
+        target.setCustomValidity(issue.message);
+        target.reportValidity();
+        return;
+      }
       project.equipmentPlan = plan;
       project.equipmentPlanMode = "custom";
       setActiveProject(project, true);
@@ -961,6 +662,7 @@ function bindEvents() {
   document.querySelectorAll("[data-default-field]").forEach((inputElement) => {
     inputElement.addEventListener("change", (event) => {
       const target = event.target as HTMLInputElement;
+      if (!controlIsValid(target)) return;
       const project = clone(activeProject());
       const field = target.dataset.defaultField as keyof EquipmentDefaults;
       project.equipmentDefaults[field] = Number(target.value);
@@ -971,6 +673,7 @@ function bindEvents() {
   document.querySelectorAll("[data-pricing-field]").forEach((inputElement) => {
     const updatePricing = (event: Event) => {
       const target = event.target as HTMLInputElement;
+      if (!controlIsValid(target)) return;
       const project = clone(activeProject());
       const field = target.dataset.pricingField as keyof PricingSettings;
       project.pricing[field] = Number(target.value);
@@ -983,8 +686,16 @@ function bindEvents() {
   document.querySelectorAll("[data-assumption-field]").forEach((inputElement) => {
     inputElement.addEventListener("change", (event) => {
       const target = event.target as HTMLInputElement;
+      if (!controlIsValid(target)) return;
       const field = target.dataset.assumptionField as keyof Assumptions;
-      (state.assumptions[field] as number) = Number(target.value);
+      const assumptions = { ...state.assumptions, [field]: Number(target.value) };
+      const issue = validateAssumptions(assumptions).find((item) => item.path === field);
+      if (issue) {
+        target.setCustomValidity(issue.message);
+        target.reportValidity();
+        return;
+      }
+      state.assumptions = assumptions;
       const equipmentUiState = captureEquipmentUiState();
       saveState();
       render();
@@ -1024,6 +735,14 @@ function bindEvents() {
       window.print();
     });
   });
+
+  const exportLink = document.querySelector<HTMLAnchorElement>("[data-export-csv]");
+  if (exportLink) {
+    const project = activeProject();
+    csvObjectUrl = createCsvObjectUrl(buildProjectCsv(project, state.assumptions, brands));
+    exportLink.href = csvObjectUrl;
+    exportLink.download = projectCsvFilename(project);
+  }
 
 }
 

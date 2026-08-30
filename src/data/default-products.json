@@ -4,14 +4,14 @@
       "id": "pv-200",
       "name": "200 W mono solar panel",
       "unit": "panel",
-      "unitCost": 130,
+      "unitCost": 65,
       "watts": 200
     },
     {
       "id": "pv-450",
       "name": "450 W mono solar panel",
       "unit": "panel",
-      "unitCost": 245,
+      "unitCost": 80,
       "watts": 450
     }
   ],
@@ -20,14 +20,14 @@
       "id": "bat-1280",
       "name": "12.8 V 100 Ah LiFePO4 battery",
       "unit": "battery",
-      "unitCost": 310,
+      "unitCost": 220,
       "wattHours": 1280
     },
     {
       "id": "bat-2560",
       "name": "25.6 V 100 Ah LiFePO4 battery",
       "unit": "battery",
-      "unitCost": 560,
+      "unitCost": 500,
       "wattHours": 2560
     }
   ],
@@ -36,14 +36,14 @@
       "id": "mppt-30",
       "name": "30 A MPPT charge controller",
       "unit": "controller",
-      "unitCost": 145,
+      "unitCost": 120,
       "amps": 30
     },
     {
       "id": "mppt-60",
       "name": "60 A MPPT charge controller",
       "unit": "controller",
-      "unitCost": 260,
+      "unitCost": 150,
       "amps": 60
     }
   ],
@@ -52,14 +52,14 @@
       "id": "hybrid-1000",
       "name": "1 kW hybrid inverter charger",
       "unit": "inverter",
-      "unitCost": 420,
+      "unitCost": 220,
       "watts": 1000
     },
     {
       "id": "hybrid-2000",
       "name": "2 kW hybrid inverter charger",
       "unit": "inverter",
-      "unitCost": 690,
+      "unitCost": 460,
       "watts": 2000
     }
   ],
@@ -68,7 +68,7 @@
       "id": "dc-board",
       "name": "DC breaker board, fuses, labels, and surge protection",
       "unit": "set",
-      "unitCost": 180
+      "unitCost": 100
     }
   ],
   "acDistribution": [
@@ -76,7 +76,7 @@
       "id": "ac-board",
       "name": "AC breaker board, RCD, outlets, and labels",
       "unit": "set",
-      "unitCost": 220
+      "unitCost": 90
     }
   ],
   "cabling": [
@@ -84,7 +84,7 @@
       "id": "cable-kit",
       "name": "PV, battery, and load cabling with MC4/connectors",
       "unit": "kit",
-      "unitCost": 210
+      "unitCost": 140
     }
   ],
   "earthing": [
@@ -92,7 +92,7 @@
       "id": "earth-kit",
       "name": "Earthing rod, bonding, surge, and lightning protection kit",
       "unit": "kit",
-      "unitCost": 190
+      "unitCost": 140
     }
   ],
   "monitoring": [
@@ -100,7 +100,7 @@
       "id": "monitor-kit",
       "name": "Battery monitor and remote energy logging",
       "unit": "kit",
-      "unitCost": 155
+      "unitCost": 150
     }
   ]
 }
