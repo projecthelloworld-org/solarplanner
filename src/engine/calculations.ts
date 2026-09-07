@@ -10,7 +10,7 @@ export function calculateLoadRows(project: Project): LoadCalculation[] {
     const watts = Math.max(0, safeNumber(load.watts));
     const hoursPerDay = Math.min(24, Math.max(0, safeNumber(load.hoursPerDay)));
     const surgeMultiplier = Math.max(1, safeNumber(load.surgeMultiplier, 1));
-    const runningWatts = quantity * watts;
+    const runningWatts = hoursPerDay > 0 ? quantity * watts : 0;
 
     return {
       load,
@@ -34,12 +34,12 @@ function sizeSystem(
   const systemVoltage = Math.max(12, project.systemVoltage);
   const requiredBatteryWh =
     (adjustedDailyWh * autonomyDays * assumptions.batteryReserveFactor) / assumptions.batteryDepthOfDischarge;
-  const recommendedSolarArrayW = (adjustedDailyWh / sunHours / assumptions.arrayDerateFactor) * assumptions.batteryReserveFactor;
+  const recommendedSolarArrayW = roundUpTo((adjustedDailyWh / sunHours / assumptions.arrayDerateFactor) * assumptions.batteryReserveFactor, 10);
   const recommendedMpptCurrentA = (recommendedSolarArrayW / systemVoltage) * assumptions.mpptSafetyFactor;
   const recommendedInverterW = Math.max(inverterRunningW * assumptions.inverterHeadroomFactor, inverterSurgeW);
 
   return {
-    adjustedDailyWh: Math.round(adjustedDailyWh),
+    adjustedDailyWh,
     requiredBatteryWh: roundUpTo(requiredBatteryWh, 100),
     recommendedSolarArrayW: roundUpTo(recommendedSolarArrayW, 10),
     recommendedMpptCurrentA: roundUpTo(recommendedMpptCurrentA, 5),
@@ -64,12 +64,12 @@ export function calculateProject(project: Project, assumptions: Assumptions): Ca
 
   return {
     loadRows,
-    totalDailyWh: Math.round(totalDailyWh),
-    peakLoadW: Math.round(peakLoadW),
-    surgeLoadW: Math.round(surgeLoadW),
-    acPeakLoadW: Math.round(acPeakLoadW),
-    acSurgeLoadW: Math.round(acSurgeLoadW),
-    criticalDailyWh: Math.round(criticalDailyWh),
+    totalDailyWh,
+    peakLoadW,
+    surgeLoadW,
+    acPeakLoadW,
+    acSurgeLoadW,
+    criticalDailyWh,
     dc: sizeSystem(dcAdjustedWh, 0, 0, project, assumptions, false),
     hybrid: sizeSystem(hybridAdjustedWh, acPeakLoadW, acSurgeLoadW, project, assumptions, true),
   };

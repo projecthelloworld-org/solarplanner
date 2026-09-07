@@ -1,9 +1,11 @@
 import type { Assumptions, CostEstimate, CostLine, EquipmentPlan, PricingSettings, Project, SystemOptionId } from "../types/project";
+import { inverterDescription } from "./equipment";
 
-const convert = (usd: number, exchangeRate: number): number => Math.round(usd * Math.max(0, exchangeRate));
+const cents = (value: number): number => Math.round((value + Number.EPSILON) * 100) / 100;
+const convert = (usd: number, exchangeRate: number): number => cents(usd * exchangeRate);
 
 function line(category: string, description: string, quantity: number, unitCostUsd: number, exchangeRate: number): CostLine {
-  const totalUsd = quantity * unitCostUsd;
+  const totalUsd = cents(quantity * unitCostUsd);
 
   return {
     category,
@@ -23,7 +25,7 @@ export function estimateCosts(
   assumptions: Assumptions,
   systemId: SystemOptionId,
 ): CostEstimate {
-  const exchangeRate = Math.max(0, project.usdExchangeRate || 1);
+  const exchangeRate = project.currency === "USD" ? 1 : project.usdExchangeRate;
   const lines: CostLine[] = [
     line("Solar panels", `${plan.shared.panelCount} panel(s) x ${plan.shared.panelWatts} W`, plan.shared.panelCount, pricing.panelUnitUsd, exchangeRate),
     line(
@@ -51,12 +53,12 @@ export function estimateCosts(
         "Charge controller or hybrid inverter",
         `${plan.hybrid.controllerCount} controller(s) x ${plan.hybrid.mpptAmps} A MPPT`,
         plan.hybrid.controllerCount,
-        pricing.controllerUnitUsd,
+        pricing.hybridControllerUnitUsd ?? pricing.controllerUnitUsd,
         exchangeRate,
       ),
       line(
         "Hybrid inverter capacity",
-        `${plan.hybrid.inverterCount} inverter(s) x ${plan.hybrid.inverterWatts} W`,
+        `${plan.hybrid.inverterCount} inverter(s) x ${plan.hybrid.inverterWatts} W; ${inverterDescription(plan)}`,
         plan.hybrid.inverterCount,
         pricing.inverterUnitUsd,
         exchangeRate,
@@ -98,22 +100,22 @@ export function estimateCosts(
     line("Monitoring", "Battery monitor and remote energy logging", plan.balance.monitoringCount, pricing.monitoringUnitUsd, exchangeRate),
   );
 
-  const subtotalUsd = lines.reduce((sum, item) => sum + item.totalUsd, 0);
-  const installationUsd = Math.round(subtotalUsd * assumptions.installationRate);
-  const contingencyUsd = Math.round((subtotalUsd + installationUsd) * assumptions.contingencyRate);
-  const totalUsd = subtotalUsd + installationUsd + contingencyUsd;
+  const subtotalUsd = cents(lines.reduce((sum, item) => sum + item.totalUsd, 0));
+  const installationUsd = cents(subtotalUsd * assumptions.installationRate);
+  const contingencyUsd = cents((subtotalUsd + installationUsd) * assumptions.contingencyRate);
+  const totalUsd = cents(subtotalUsd + installationUsd + contingencyUsd);
 
   return {
     systemId,
     lines,
     subtotalUsd,
-    subtotal: convert(subtotalUsd, exchangeRate),
+    subtotal: cents(lines.reduce((sum, item) => sum + item.total, 0)),
     installationUsd,
     installation: convert(installationUsd, exchangeRate),
     contingencyUsd,
     contingency: convert(contingencyUsd, exchangeRate),
     totalUsd,
-    total: convert(totalUsd, exchangeRate),
+    total: cents(lines.reduce((sum, item) => sum + item.total, 0) + convert(installationUsd, exchangeRate) + convert(contingencyUsd, exchangeRate)),
     currency: project.currency,
     exchangeRate,
   };

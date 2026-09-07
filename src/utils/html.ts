@@ -11,4 +11,4 @@ export function escapeHtml(value: string | number): string {
     .replace(/'/g, "&#039;");
 }
 
-export const attribute = (value: string | number): string => escapeHtml(value);
+export const attribute = (value: string | number): string => escapeHtml(typeof value === "number" && !Number.isFinite(value) ? "" : value);

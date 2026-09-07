@@ -4,7 +4,7 @@ Release date: 2026-08-30
 
 ## Overview
 
-Version 1.1.0 is the first reliability and maintainability release after the initial open-source launch. It strengthens calculation behavior, saved-project recovery, input validation, regional price assumptions, report exports, automated verification, and the internal module structure.
+Version 1.1.0 is the first reliability and maintainability release after the initial open-source launch. It strengthens calculation behavior, saved-project recovery, input validation, regional price assumptions, report exports, automated verification, and module boundaries.
 
 The release remains a planning estimator. It does not replace site assessment, component compatibility checks, protection design, cable sizing, or review by a qualified solar/electrical technician.
 
@@ -56,7 +56,7 @@ The first `src/main.ts` decomposition phase is complete:
 - `src/exports/project-report.ts` owns printable report and CSV assembly;
 - `src/utils/` contains shared formatting and HTML utilities.
 
-Panel renderers and event controllers remain the next structural milestone.
+The resulting boundaries make persistence and export behavior independently testable while preserving the no-framework architecture.
 
 ## Upgrade Notes
 

@@ -15,8 +15,8 @@ function range(path: string, label: string, value: number, minimum: number, maxi
 }
 
 function nonNegative(path: string, label: string, value: number, integer = false): ValidationIssue[] {
-  if (!finite(value) || value < 0 || (integer && !Number.isInteger(value))) {
-    return [{ path, message: `${label} must be a ${integer ? "whole " : ""}number of zero or more.` }];
+  if (!finite(value) || value < 0 || value > 1_000_000 || (integer && !Number.isInteger(value))) {
+    return [{ path, message: `${label} must be a ${integer ? "whole " : ""}number between 0 and 1000000.` }];
   }
   return [];
 }

@@ -8,6 +8,25 @@ The project follows [Semantic Versioning](https://semver.org/). Release tags use
 
 Use this section for changes that have not yet been included in a tagged release.
 
+## 1.2.0 - 2026-09-07
+
+- Add 12/24/48 V catalogue selection, native small 24 V and 48 V batteries, and input-voltage-specific inverter references with traceable prices.
+- Require documented battery string limits; flag unresolved products and unknown BMS ratings.
+- Account for integrated MPPT capacity and avoid duplicate generated controller costs.
+- Preserve reference IDs, existing custom equipment and quotes through saved-project normalization. Reports and CSV show selected inverter input voltage/type and included MPPT.
+- Preserve uncalculated load drafts across sidebar changes; additions and deletions also wait for Calculate. Hold report/export actions while edits are pending.
+- Keep form nodes and keyboard focus during sidebar recalculation; add visible focus, accessible row controls, error associations, table scrolling, reduced-motion support and mobile reflow fixes.
+- Size controller quantities for the installed rounded panel array; compare edited arrays against controller capacity in the planner, PDF and CSV.
+- Round batteries to complete nominal-voltage strings; flag incompatible banks, unconfirmed AC-to-DC replacements, and unsupported assumptions about parallel inverters.
+- Generate one adequately rated inverter; show contextual notes about idle consumption, BMS limits, peak/surge, reserve and solar recovery.
+- Exclude zero-hour loads from peak/surge; empty projects generate zero equipment and an attention status. Preserve fractional energy through sizing.
+- Align starter battery, controller and inverter specifications with pricing. Raise the 450 W panel allowance to USD 110; retain saved project prices.
+- Select load-appropriate catalogue sizes instead of forcing full-hub components onto light loads. Add 100 W panels, 40 Ah batteries, 20 A controllers, 300 W inverters, and compact balance-of-system allowances.
+- Keep the 2.56 kWh battery at its evidence-backed USD 500 class price, while allowing a one-router plan to use a smaller USD 100 battery class and omit optional monitoring.
+- Preserve cents in costing, reconcile converted totals and force USD exchange rate to one.
+- Keep the planner usable when browser storage is unavailable. Improve selected-report consistency and print pagination.
+- Add numerical regression coverage and a documented accessibility, calculation and pricing review. No runtime dependencies added.
+
 ## 1.1.0 - 2026-08-30
 
 ### Changed

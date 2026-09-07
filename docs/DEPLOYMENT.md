@@ -21,9 +21,9 @@ Choose one of these deployment paths:
 Clone the repository and check out a tagged release:
 
 ```bash
-git clone https://os.myhellohub.org/helloworld/solar_planner.git
-cd solar_planner
-git checkout v1.1.0
+git clone https://github.com/projecthelloworld-org/solarplanner.git
+cd solarplanner
+git checkout v1.2.0
 ```
 
 Build and start:
@@ -86,14 +86,12 @@ ports:
 
 For a standard partner deployment:
 
-1. Create an application from the GitLab repository.
+1. Create an application from the connected GitHub or GitLab repository.
 2. Select the desired tagged release or stable branch.
 3. Use Docker Compose or Dockerfile build mode.
 4. Attach the deployment domain to container port `80`.
 5. Enable HTTPS.
 6. Deploy and verify the load table, report, CSV download, and print flow.
-
-Project Hello World's hosted tools landing page is maintained separately on the `phw` branch. Partners deploying only the open-source planner should use the stable release tag instead.
 
 ## Customizing Defaults
 
@@ -128,7 +126,7 @@ Read `CHANGELOG.md`, then check out the target tag and rebuild:
 
 ```bash
 git fetch --tags
-git checkout v1.1.0
+git checkout v1.2.0
 docker compose up -d --build
 ```
 

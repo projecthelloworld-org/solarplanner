@@ -9,7 +9,7 @@ It converts an editable electrical load table into two planning options:
 
 The planner estimates energy demand, battery storage, solar array capacity, charge-controller current, inverter capacity, equipment adequacy, and project costs. It also generates a printable report and a spreadsheet-friendly CSV export.
 
-Current supported release: **v1.1.0**
+Current version: **v1.2.0**. See the [release notes](docs/RELEASE_NOTES_v1.2.0.md), [calculation method](docs/CALCULATIONS.md), and [pricing methodology](docs/PRICING.md) for the behavior and evidence behind the estimates.
 
 > Hello Solar Planner provides planning estimates, not certified electrical design. A qualified solar/electrical technician must review the final design and installation.
 
@@ -25,7 +25,7 @@ The default deployment has no backend, no accounts, and no telemetry. Project da
 - Editable DC and AC load table with quantity, watts, runtime, voltage, surge multiplier, and critical-load flag
 - Explicit **Calculate** action so the plan does not change while a user is still typing
 - Fully DC and Hybrid DC + AC sizing shown side by side
-- Generated solar panels, batteries, controllers, inverter, and balance-of-system equipment
+- Load-sensitive generated solar panels, batteries, controllers, inverter, and balance-of-system equipment
 - Manual equipment and unit-price edits with live adequacy warnings
 - **Use generated values** reset based on the current calculated load
 - Preliminary checks met or Needs attention status for each system option
@@ -45,7 +45,7 @@ The default deployment has no backend, no accounts, and no telemetry. Project da
 | [SPEC.md](SPEC.md) | Technical reviewers | Functional behavior, formulas, and assumptions |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Self-hosters | Docker, static hosting, Dokploy, HTTPS, upgrades, and troubleshooting |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Developers | Modules, data flow, persistence, and v2 target structure |
-| [docs/CODEBASE_REVIEW.md](docs/CODEBASE_REVIEW.md) | Maintainers | v1 assessment and prioritized v2 roadmap |
+| [ROADMAP.md](ROADMAP.md) | Community and maintainers | Public priorities and future direction |
 | [docs/PRICING.md](docs/PRICING.md) | Planners and maintainers | Regional price baseline, sources, and refresh method |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Contributors | Development and merge-request workflow |
 | [docs/RELEASING.md](docs/RELEASING.md) | Maintainers | Semantic versioning, branches, tags, and release checklist |
@@ -180,7 +180,7 @@ Defaults are transparent JSON files:
 - `src/data/assumptions.json`: efficiency, reserve, derating, installation, contingency, and safety text
 - `src/data/default-products.json`: starter equipment capacities and Kenya/Uganda regional USD price baselines
 - `src/data/sample-project.json`: Hello Hub Lite example
-- `src/data/brand-profiles.json`: internal/legacy report branding metadata
+- `src/data/brand-profiles.json`: report branding metadata
 
 The starter prices are dated planning baselines rather than quotations. Review [docs/PRICING.md](docs/PRICING.md), localize prices before procurement, and rebuild after changing JSON defaults.
 
@@ -198,7 +198,7 @@ There is no server-side project storage in v1. Clearing browser data can remove 
 
 Do not embed secrets in source files or JSON defaults. This is a static frontend, so anything bundled into it can be viewed by users.
 
-## Releases And Branches
+## Releases
 
 Release tags follow Semantic Versioning:
 
@@ -206,8 +206,7 @@ Release tags follow Semantic Versioning:
 vMAJOR.MINOR.PATCH
 ```
 
-- `master` is the reusable open-source product and source of release tags.
-- `phw` contains the Project Hello World hosted tools landing page and Dokploy-specific integration.
+- `master` is the stable open-source branch and source of release tags.
 - Production deployments should pin to an immutable release tag where possible.
 
 See [docs/RELEASING.md](docs/RELEASING.md) before preparing a release.
@@ -233,9 +232,9 @@ Calculation changes must include the formula rationale, representative examples,
 - No user accounts or collaboration backend
 - Manual exchange-rate entry only
 - English-only interface
-- `src/main.ts` still combines panel rendering and event binding; persistence, normalization, planning orchestration, and exports have been extracted
+- Project portability, localization, and broader browser-level verification remain future work
 
-The prioritized improvement plan is in [docs/CODEBASE_REVIEW.md](docs/CODEBASE_REVIEW.md).
+See the public [roadmap](ROADMAP.md) for planned improvements and contribution opportunities.
 
 ## License
 

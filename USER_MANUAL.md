@@ -152,6 +152,8 @@ Click **Calculate** after editing the load table.
 
 The planner does not recalculate on every keystroke. This lets you finish editing a table before the system recommendation changes.
 
+Added and deleted rows also wait for Calculate. A pending-changes message tells you when the cards still represent the last calculation, and the report is held until you calculate. You can edit sidebar values without losing unfinished load rows. Drafts are kept during this session, but are not saved across page reloads until calculated. Blank numbers must be corrected; enter zero deliberately to exclude quantity or hours. New Project opens an empty load table; Sample opens the example equipment list.
+
 When you click **Calculate**, the app updates:
 
 - daily energy
@@ -210,7 +212,7 @@ Set:
 
 All unit prices are entered in USD. Converted totals use the exchange rate you enter.
 
-The values initially shown are dated Kenya/Uganda regional planning baselines, not supplier quotations. Confirm current local prices, delivery, taxes, warranty, and installation costs before procurement. See `docs/PRICING.md` for the baseline method and sources.
+The values initially shown are dated Kenya/Uganda regional planning baselines, not supplier quotations. Confirm current local prices, delivery, taxes, warranty, and installation costs before procurement. See the [pricing methodology](docs/PRICING.md) for the baseline method and sources.
 
 ### Solar Panels
 
@@ -274,10 +276,9 @@ Each category has:
 
 The assumptions section contains editable planning factors such as:
 
-- default panel watts
-- default battery voltage and Ah
-- MPPT amp step
-- inverter watt step
+- largest generated panel watts
+- preferred battery voltage and Ah (larger compatible classes may be needed)
+- preferred controller amps (voltage compatibility takes priority)
 - DC efficiency
 - Hybrid DC efficiency
 - inverter efficiency
@@ -322,7 +323,7 @@ The edited/generated equipment meets the planner's high-level capacity compariso
 
 ### Needs Attention
 
-One or more edited equipment values are below the calculated requirement.
+One or more capacities are below the requirement, or the plan contains an unresolved issue such as an incompatible battery bank, AC devices in a Fully DC plan, multiple inverters assumed to share a load, or a starter price that no longer matches the panel/inverter rating.
 
 For example:
 
@@ -332,6 +333,31 @@ Battery storage is 2.56 kWh; recommendation is 3.20 kWh.
 ```
 
 You can still generate a report when a plan needs attention. The warning will be included so the reviewer understands the issue.
+
+Open Planning notes beneath each option for the assumptions behind its result. The PDF and CSV include those notes too.
+
+### Reading The Capacity Numbers
+
+- Battery Wh is nominal capacity. The requirement already allows for depth of discharge; do not reduce the listed equipment Wh a second time when comparing. Check nameplate voltage: 25.6 V / 100 Ah stores 2,560 Wh, while 24 V / 100 Ah stores 2,400 Wh.
+- Controller current follows the installed panels, including rounding or extra panels you add. Generation compares 20 A, 30 A, and 60 A catalogue units up to the configured largest size; each controller needs an appropriate share of the PV array.
+- Generated inverters use one suitably rated unit. More inverters cannot automatically power one larger appliance. Match battery voltage, continuous watts, VA and surge duration to the actual inverter.
+- Zero quantity or hours excludes the row. Critical marks priority energy but all active loads still count toward battery autonomy. Peak assumes all active devices run together; surge assumes one group starts while others run.
+- Use low-season peak sun hours. More autonomy needs more batteries, but solar is still sized for daily energy plus reserve; it does not promise a particular recovery time after cloudy weather.
+- Wattage should represent input consumption, ideally measured. For Hybrid, include inverter idle draw as a DC load for its on-hours if significant; exclude that row when estimating Fully DC. Confirm DC converters, USB supplies and PoE equipment for loads at different voltages.
+
+### Prices And Access
+
+Choose 12 V, 24 V or 48 V under System voltage. The generator selects compatible references: LiFePO4 nameplates are typically 12.8 V, 25.6 V and 51.2 V respectively. A light 24 V router plan can use one native 25.6 V / 50 Ah battery without assuming that smaller batteries can be wired in series. The USD 500 allowance applies to the larger 25.6 V / 100 Ah class. Untouched generated plans use compact accessory allowances up to 300 W PV and omit dedicated monitoring for a single light load group.
+
+Battery, controller and inverter reference dropdowns are available inside Equipment & pricing. Selecting a reference applies its voltage/capacity and reference USD price. Quantity remains editable. DC and Hybrid controllers have independent references, quantities and prices. Selecting a compatible single inverter also updates its supplementary controller quantity. Editing a capacity directly changes the item to Custom / unverified. Price notes distinguish matched listings from comparable-class allowances.
+
+Integrated inverters include their documented MPPT capacity and price once. The generated Hybrid plan adds a separate controller only for remaining capacity. The Fully DC plan retains its own controller. Inverter descriptions and reports show nominal input voltage, type and included MPPT amps. A different battery/system voltage does not change daily energy demand, but it changes current and compatible equipment.
+
+When specifications are missing or incompatible, Needs attention explains what remains unresolved. Some large 12 V banks cannot be generated from the small native-voltage reference catalogue because parallel approval is unknown. Obtain a reviewed quote or choose a suitable higher system voltage; do not interpret a zero unresolved equipment quantity as a complete lower-cost system. Older edited plans remain intact and unverified until matched to references. Use generated values to regenerate compatible equipment; manually entered prices remain preserved.
+
+These are editable regional allowances. Editing any price preserves the complete displayed price set with the edited equipment plan. **Use generated values** recalculates equipment but retains genuinely edited prices. Always replace assumptions with comparable local quotations; mounting, tax, delivery, cable lengths, protection, and remote-site work can require a higher allowance. See [pricing evidence](docs/PRICING.md).
+
+All controls can be reached by keyboard. Tab moves between fields, Enter or Space toggles an accordion, and arrow keys scroll the focused load-table region. Focus stays in place after sidebar changes. Errors identify the row and field. Report generation moves focus to the report. On narrow screens the load table scrolls within its panel. Reduced-motion browser preferences are respected. Browser PDF tagging and reading order depend on the browser/print driver and are not formally certified.
 
 ## Reports
 

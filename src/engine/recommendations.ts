@@ -1,12 +1,12 @@
-import type { CalculationResult, Project, SystemRecommendation } from "../types/project";
+import type { CalculationResult, Project, SystemRecommendation, EquipmentEvaluation } from "../types/project";
 
 const formatKwh = (wh: number): string => `${(wh / 1000).toFixed(1)} kWh`;
 
-export function buildRecommendations(project: Project, result: CalculationResult): SystemRecommendation[] {
+export function buildRecommendations(project: Project, result: CalculationResult, dcEvaluation: EquipmentEvaluation): SystemRecommendation[] {
   const acLoadCount = project.loads.filter((load) => load.currentType === "AC").length;
   const dcSummary =
     acLoadCount > 0
-      ? "Best when AC devices can be replaced with DC equivalents or powered through small point-of-use adapters."
+      ? "Assumes AC devices are replaced with compatible DC equipment. Review replacement wattages before choosing this option."
       : "A simple direct-current architecture that avoids inverter losses and keeps the installation compact.";
 
   return [
@@ -22,18 +22,18 @@ export function buildRecommendations(project: Project, result: CalculationResult
         },
         {
           category: "Battery",
-          recommendation: `${formatKwh(result.dc.requiredBatteryWh)} LiFePO4 minimum usable-backed storage`,
+          recommendation: `${formatKwh(result.dc.requiredBatteryWh)} LiFePO4 nominal storage`,
           rationale: `Sized for ${project.autonomyDays} autonomy day(s) at the configured depth of discharge.`,
         },
         {
           category: "Solar array",
           recommendation: `${result.dc.recommendedSolarArrayW.toLocaleString()} W PV array`,
-          rationale: `Based on ${project.sunHours} average sun hour(s) with derating for real-world conditions.`,
+          rationale: `Based on ${project.sunHours} peak sun hour(s) with derating. Use a low-sun-season estimate; extra autonomy does not automatically size rapid recovery after cloudy days.`,
         },
         {
           category: "Charge control",
-          recommendation: `${result.dc.recommendedMpptCurrentA} A MPPT at ${project.systemVoltage} V`,
-          rationale: "Controller current includes a safety factor above expected PV charging current.",
+          recommendation: `${dcEvaluation.checks.find((check) => check.label === "MPPT/controller")!.required} A MPPT at ${project.systemVoltage} V`,
+          rationale: "Controller current covers demand or the installed array, whichever is larger, with the configured headroom.",
         },
       ],
     },
@@ -49,13 +49,13 @@ export function buildRecommendations(project: Project, result: CalculationResult
         },
         {
           category: "Battery",
-          recommendation: `${formatKwh(result.hybrid.requiredBatteryWh)} LiFePO4 minimum usable-backed storage`,
+          recommendation: `${formatKwh(result.hybrid.requiredBatteryWh)} LiFePO4 nominal storage`,
           rationale: `Sized for ${project.autonomyDays} autonomy day(s), including reserve and depth-of-discharge limits.`,
         },
         {
           category: "Solar array",
           recommendation: `${result.hybrid.recommendedSolarArrayW.toLocaleString()} W PV array`,
-          rationale: `Based on ${project.sunHours} average sun hour(s), array derating, and storage recovery needs.`,
+          rationale: `Based on ${project.sunHours} peak sun hour(s) and array derating. Covers daily energy plus reserve, not a guaranteed battery recharge time after cloudy days.`,
         },
         {
           category: "Inverter",

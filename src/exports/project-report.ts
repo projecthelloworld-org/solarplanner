@@ -1,6 +1,7 @@
 import { Eta } from "eta";
 import reportTemplate from "../templates/report.eta?raw";
 import { getSelectedReportBundle } from "../engine/planner";
+import { includedMpptAmps, inverterDescription } from "../engine/equipment";
 import type { Assumptions, BrandProfile, Project } from "../types/project";
 import { decimalFormat, formatEnergy, integerFormat, money, moneyDetailed, moneyUsd } from "../utils/format";
 import { csvLine } from "./csv";
@@ -18,6 +19,8 @@ export function renderProjectReport(project: Project, assumptions: Assumptions, 
   return eta.renderString(reportTemplate, {
     project,
     ...bundle,
+    inverterDescription: inverterDescription(bundle.plan),
+    includedMpptA: includedMpptAmps(bundle.plan),
     assumptions,
     brand,
     generatedAt: new Date().toLocaleDateString("en", { year: "numeric", month: "short", day: "numeric" }),
@@ -25,7 +28,7 @@ export function renderProjectReport(project: Project, assumptions: Assumptions, 
     moneyDetailed: (value: number) => moneyDetailed(value, project),
     moneyUsd,
     formatEnergy,
-    formatNumber: (value: number) => integerFormat.format(value),
+    formatNumber: (value: number) => decimalFormat.format(value),
     formatDecimal: (value: number) => decimalFormat.format(value),
     formatPercent: (value: number) => `${Math.round(value * 100)}%`,
   }) as string;
@@ -38,6 +41,8 @@ export function buildProjectCsv(project: Project, assumptions: Assumptions, bran
   const selectedLines = bundle.selectedRecommendation.lines;
 
   rows.push(["Project Summary"]);
+  rows.push(["Project name", project.name]);
+  rows.push(["Equipment plan", project.equipmentPlanMode === "custom" ? "Edited plan" : "Load-generated plan"]);
   rows.push(["Country", project.country]);
   rows.push(["Currency", project.currency]);
   rows.push(["USD exchange rate", `1 USD = ${decimalFormat.format(project.usdExchangeRate)} ${project.currency}`]);
@@ -60,17 +65,17 @@ export function buildProjectCsv(project: Project, assumptions: Assumptions, bran
       `${row.load.voltage} V`,
       `${row.load.surgeMultiplier}x`,
       row.load.critical ? "Yes" : "No",
-      Math.round(row.dailyWh),
+      Number(row.dailyWh.toFixed(2)),
     ]);
   });
-  rows.push(["Total daily energy", "", "", "", "", "", "", "", Math.round(bundle.result.totalDailyWh)]);
+  rows.push(["Total daily energy", "", "", "", "", "", "", "", Number(bundle.result.totalDailyWh.toFixed(2))]);
   rows.push([]);
 
   rows.push(["Technical Sizing Summary", bundle.selectedSystemName]);
   rows.push(["Adjusted daily energy", formatEnergy(bundle.selectedSizing.adjustedDailyWh)]);
   rows.push(["Required LiFePO4 battery", formatEnergy(bundle.selectedSizing.requiredBatteryWh)]);
   rows.push(["Recommended solar array", `${integerFormat.format(bundle.selectedSizing.recommendedSolarArrayW)} W`]);
-  rows.push(["Recommended MPPT current", `${bundle.selectedSizing.recommendedMpptCurrentA} A`]);
+  rows.push(["Recommended MPPT current", `${bundle.selectedMpptRequirement} A`, "Larger of demand and installed array requirement"]);
   rows.push(["Recommended inverter size", bundle.selectedSystem === "hybrid" ? `${integerFormat.format(bundle.selectedSizing.recommendedInverterW)} W` : "Not required"]);
   rows.push([]);
 
@@ -89,17 +94,17 @@ export function buildProjectCsv(project: Project, assumptions: Assumptions, bran
     formatEnergy(bundle.selectedSizing.requiredBatteryWh),
   ]);
   if (bundle.selectedSystem === "dc") {
-    rows.push(["DC MPPT/controller", `${bundle.plan.dc.controllerCount} controller(s) x ${bundle.plan.dc.mpptAmps} A`, `${bundle.actuals.dcMpptA} A total`, `${bundle.selectedSizing.recommendedMpptCurrentA} A`]);
+    rows.push(["DC MPPT/controller", `${bundle.plan.dc.controllerCount} controller(s) x ${bundle.plan.dc.mpptAmps} A`, `${bundle.actuals.dcMpptA} A total`, `${bundle.selectedMpptRequirement} A`]);
   } else {
     rows.push([
       "Hybrid MPPT/controller",
-      `${bundle.plan.hybrid.controllerCount} controller(s) x ${bundle.plan.hybrid.mpptAmps} A`,
+      `${bundle.plan.hybrid.controllerCount} separate controller(s) x ${bundle.plan.hybrid.mpptAmps} A + ${includedMpptAmps(bundle.plan)} A integrated MPPT`,
       `${bundle.actuals.hybridMpptA} A total`,
-      `${bundle.selectedSizing.recommendedMpptCurrentA} A`,
+      `${bundle.selectedMpptRequirement} A`,
     ]);
     rows.push([
       "Hybrid inverter",
-      `${bundle.plan.hybrid.inverterCount} inverter(s) x ${bundle.plan.hybrid.inverterWatts} W`,
+      `${bundle.plan.hybrid.inverterCount} inverter(s) x ${bundle.plan.hybrid.inverterWatts} W; ${inverterDescription(bundle.plan)}`,
       `${integerFormat.format(bundle.actuals.hybridInverterW)} W`,
       `${integerFormat.format(bundle.selectedSizing.recommendedInverterW)} W`,
     ]);
@@ -109,6 +114,7 @@ export function buildProjectCsv(project: Project, assumptions: Assumptions, bran
   rows.push([bundle.selectedRecommendation.name]);
   rows.push(["Status", bundle.selectedEvaluation.status]);
   bundle.selectedEvaluation.warnings.forEach((warning) => rows.push(["Warning", warning]));
+  bundle.selectedEvaluation.notes.forEach((note) => rows.push(["Planning note", note]));
   rows.push(["Summary", bundle.selectedRecommendation.summary]);
   rows.push(["Category", "Recommendation", "Rationale"]);
   selectedLines.forEach((line) => rows.push([line.category, line.recommendation, line.rationale]));

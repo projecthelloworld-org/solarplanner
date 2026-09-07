@@ -22,10 +22,9 @@ Examples:
 ## Branch Roles
 
 - `master`: reusable open-source product and source of release tags
-- `phw`: Project Hello World hosted tools landing page and Dokploy-specific integration
 - short-lived feature/fix branches: reviewed changes before merge
 
-Reusable changes should land on `master` first. Merge `master` into `phw` so the hosted deployment does not become a separate product fork.
+Organization-specific deployment branches are not release sources. Reusable changes should land on `master` before a release is tagged.
 
 ## Release Checklist
 
@@ -49,20 +48,18 @@ docker compose config
 git tag -a vX.Y.Z -m "Hello Solar Planner vX.Y.Z"
 ```
 
-9. Push the branch and tag to both maintained repositories:
+9. Push the branch and tag to each maintained public mirror:
 
 ```bash
-git push origin master
-git push origin vX.Y.Z
-git push upstream master
-git push upstream vX.Y.Z
+git push <remote> master
+git push <remote> vX.Y.Z
 ```
 
 10. Create GitLab and GitHub releases from the same immutable tag using the corresponding changelog section.
 
 ## Hotfixes
 
-Create a fix branch from the affected release line, merge the fix into `master`, increment PATCH, tag the new release, and merge the fix into `phw`.
+Create a fix branch from the affected release line, merge the fix into `master`, increment PATCH, and tag the new release. Deployment-specific branches can then consume that immutable tag.
 
 ## v2 Development
 

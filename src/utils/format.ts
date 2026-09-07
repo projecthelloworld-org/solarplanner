@@ -12,7 +12,7 @@ export function systemOptionName(systemId: SystemOptionId): string {
 }
 
 export function money(value: number, project: Project): string {
-  return `${project.currency} ${integerFormat.format(value)}`;
+  return `${project.currency} ${value.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export function moneyDetailed(value: number, project: Project): string {
@@ -24,5 +24,5 @@ export function moneyUsd(value: number): string {
 }
 
 export function formatEnergy(wh: number): string {
-  return wh >= 1000 ? `${decimalFormat.format(wh / 1000)} kWh` : `${integerFormat.format(wh)} Wh`;
+  return wh >= 1000 ? `${decimalFormat.format(wh / 1000)} kWh` : `${decimalFormat.format(wh)} Wh`;
 }

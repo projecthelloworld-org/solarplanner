@@ -4,7 +4,8 @@ import brandProfilesData from "./data/brand-profiles.json";
 import sampleProjectData from "./data/sample-project.json";
 import { loadAppState, normalizeProject, saveAppState } from "./app/persistence";
 import { calculateProject } from "./engine/calculations";
-import { generateEquipmentPlan } from "./engine/equipment";
+import { generateEquipmentPlan, inverterDescription, requiredControllerAmps, supplementaryControllers } from "./engine/equipment";
+import productsData from "./data/default-products.json";
 import { currentPlan, getProjectBundle } from "./engine/planner";
 import { validateAssumptions, validateEquipmentPlan, validateProject, type ValidationIssue } from "./engine/validation";
 import { createCsvObjectUrl } from "./exports/csv";
@@ -17,21 +18,64 @@ import type {
   EquipmentPlan,
   PricingSettings,
   Project,
+  ProductCatalog,
 } from "./types/project";
 import { attribute, clone, escapeHtml, uid } from "./utils/html";
-import { formatEnergy, integerFormat, money, moneyUsd, selectedSystemFor, systemOptionName } from "./utils/format";
+import { decimalFormat, formatEnergy, integerFormat, money, moneyUsd, selectedSystemFor, systemOptionName } from "./utils/format";
 
 const app = document.querySelector<HTMLDivElement>("#app");
+const catalog = productsData as ProductCatalog;
+
+function productSelect(label: string, category: "batteries" | "hybridInverters" | "chargeControllers", selection: string | undefined, target: string) {
+  return `<label><span>${label}</span><select data-product-target="${target}" data-product-category="${category}">
+    <option value="" ${selection ? "" : "selected"}>Custom / unverified</option>
+    ${catalog[category].map((item) => `<option value="${attribute(item.id)}" ${selection === item.id ? "selected" : ""}>${escapeHtml(item.name)} (${moneyUsd(item.unitCost)})</option>`).join("")}
+  </select></label>`;
+}
+
+function productPriceNote(category: keyof ProductCatalog, id: string | undefined): string {
+  const item = catalog[category].find((product) => product.id === id);
+  if (!item) return "No matched reference: obtain a quote and reviewed specifications.";
+  const basis = item.priceEvidence?.some((source) => source.basis === "comparable-class") ? "Price includes comparable-class evidence; obtain a matching quote. " : "";
+  return `${basis}${item.priceNotes ?? "USD planning allowance; confirm the exact model and delivery/tax costs."}`;
+}
 const brands = brandProfilesData as BrandProfile[];
 const currencyOptions = ["USD", "UGX", "KES", "TZS", "RWF", "BIF", "ZMW", "MWK", "ETB", "GHS", "NGN", "EUR", "GBP"];
-const loaded = loadAppState(localStorage);
+let storage: Storage | undefined;
+try { storage = window.localStorage; } catch { /* Private browsers can deny access to the storage getter. */ }
+const loaded = loadAppState(storage);
 let state = loaded.state;
 let persistenceNotice = loaded.notice;
 let reportVisible = false;
 let csvObjectUrl = "";
+const loadDrafts = new Map<string, Project["loads"]>();
+
+function hasPendingLoads(): boolean {
+  return loadDrafts.has(activeProject().id);
+}
+
+function hasPendingInputs(): boolean {
+  return hasPendingLoads() || Boolean(document.querySelector("[data-pending]"));
+}
+
+function updatePendingState() {
+  const pending = hasPendingLoads();
+  const notice = document.querySelector<HTMLElement>("[data-load-status]");
+  if (notice) notice.textContent = pending ? "Load changes pending. Calculate to update sizing and the report." : "Calculations are up to date.";
+  const reportContent = document.querySelector<HTMLElement>("[data-report-content]");
+  const reportNotice = document.querySelector<HTMLElement>("[data-report-pending]");
+  if (reportContent) reportContent.hidden = hasPendingInputs();
+  if (reportNotice) {
+    reportNotice.hidden = !hasPendingInputs();
+    reportNotice.textContent = pending ? "Load changes pending. Calculate before generating or exporting the report." : "Finish or correct the edited project or equipment value before exporting the report.";
+  }
+  document.body.classList.toggle("plan-pending", hasPendingInputs());
+}
 
 function saveState() {
-  persistenceNotice = saveAppState(state, localStorage);
+  persistenceNotice = saveAppState(state, storage);
+  const notice = document.querySelector<HTMLElement>("[data-persistence-notice]");
+  if (notice) { notice.textContent = persistenceNotice; notice.hidden = !persistenceNotice; }
 }
 
 function activeProject(): Project {
@@ -41,6 +85,8 @@ function activeProject(): Project {
 interface EquipmentUiState {
   openDetails: number[];
   scrollPosition: number;
+  focusedIndex: number;
+  tableScroll: number;
 }
 
 function captureEquipmentUiState(): EquipmentUiState {
@@ -49,27 +95,27 @@ function captureEquipmentUiState(): EquipmentUiState {
     return open;
   }, []);
 
-  return { openDetails, scrollPosition: window.scrollY };
+  return { openDetails, scrollPosition: window.scrollY,
+    focusedIndex: Array.from(document.querySelectorAll("input, select, button, summary, a")).indexOf(document.activeElement!),
+    tableScroll: document.querySelector(".table-wrap")?.scrollLeft ?? 0 };
 }
 
 function restoreEquipmentUiState(uiState: EquipmentUiState) {
   const details = document.querySelectorAll<HTMLDetailsElement>(".equipment-panel details");
-  uiState.openDetails.forEach((index) => {
-    const detail = details[index];
-    if (detail) detail.open = true;
-  });
+  details.forEach((detail, index) => { detail.open = uiState.openDetails.includes(index); });
+  document.querySelectorAll<HTMLElement>("input, select, button, summary, a")[uiState.focusedIndex]?.focus({ preventScroll: true });
+  const table = document.querySelector(".table-wrap");
+  if (table) table.scrollLeft = uiState.tableScroll;
   window.scrollTo({ top: uiState.scrollPosition, behavior: "instant" });
 }
 
 function setActiveProject(project: Project, preserveEquipmentUi = false) {
-  const equipmentUiState = preserveEquipmentUi ? captureEquipmentUiState() : undefined;
-
   project.updatedAt = new Date().toISOString();
   state.projects = state.projects.map((item) => (item.id === project.id ? normalizeProject(project) : item));
   saveState();
-  render();
+  if (preserveEquipmentUi) refreshResults();
+  else render();
 
-  if (equipmentUiState) restoreEquipmentUiState(equipmentUiState);
 }
 
 function formatStatus(evaluation: EquipmentEvaluation) {
@@ -116,10 +162,13 @@ function renderProjectPanel(project: Project) {
         <strong>${escapeHtml(project.name)}</strong>
       </div>
       <div class="form-grid">
-        ${input("Project name", 'type="text" data-project-field="name"', project.name)}
-        ${input("Country", 'type="text" data-project-field="country"', project.country)}
-        ${input("System voltage", 'type="number" min="12" max="100" step="1" data-project-field="systemVoltage"', project.systemVoltage)}
-        ${input("Sun hours", 'type="number" min="0.5" max="24" step="0.1" data-project-field="sunHours"', project.sunHours)}
+        ${input("Project name", 'type="text" required data-project-field="name"', project.name)}
+        ${input("Country", 'type="text" required data-project-field="country"', project.country)}
+        <label><span>System voltage</span><select data-project-field="systemVoltage">
+          ${[12,24,48].includes(project.systemVoltage) ? "" : `<option value="${project.systemVoltage}" selected>${project.systemVoltage} V (custom; review required)</option>`}
+          ${[12,24,48].map((voltage) => `<option value="${voltage}" ${project.systemVoltage === voltage ? "selected" : ""}>${voltage} V</option>`).join("")}
+        </select></label>
+        ${input("Sun hours", 'type="number" min="0.5" max="24" step="any" aria-describedby="sun-help" data-project-field="sunHours"', project.sunHours)}
         ${input("Autonomy days", 'type="number" min="0.5" max="30" step="0.5" data-project-field="autonomyDays"', project.autonomyDays)}
         <label>
           <span>System Option</span>
@@ -129,6 +178,7 @@ function renderProjectPanel(project: Project) {
           </select>
         </label>
       </div>
+      <p class="comparison-note" id="sun-help">Sun hours means peak-sun-equivalent hours per day, not daylight hours. Use a local low-sun-season estimate for reliable service.</p>
     </section>
   `;
 }
@@ -144,29 +194,29 @@ function numberField(label: string, attrs: string, value: number, help = "") {
 }
 
 function renderLoadRows(project: Project) {
-  return project.loads
+  return (loadDrafts.get(project.id) ?? project.loads)
     .map(
       (load) => `
       <tr data-load-row data-load-id="${attribute(load.id)}">
         <td>
           <div class="load-name-cell">
-            <input aria-label="Load name" data-load-id="${attribute(load.id)}" data-load-field="name" value="${attribute(load.name)}" />
+            <input aria-label="Load name" required data-load-id="${attribute(load.id)}" data-load-field="name" value="${attribute(load.name)}" />
           </div>
         </td>
         <td><input aria-label="Quantity" type="number" min="0" step="1" data-load-id="${attribute(load.id)}" data-load-field="quantity" value="${attribute(load.quantity)}" /></td>
-        <td><input aria-label="Watts" type="number" min="0" step="1" data-load-id="${attribute(load.id)}" data-load-field="watts" value="${attribute(load.watts)}" /></td>
-        <td><input aria-label="Hours per day" type="number" min="0" max="24" step="0.25" data-load-id="${attribute(load.id)}" data-load-field="hoursPerDay" value="${attribute(load.hoursPerDay)}" /></td>
+        <td><input aria-label="Watts" type="number" min="0" step="any" data-load-id="${attribute(load.id)}" data-load-field="watts" value="${attribute(load.watts)}" /></td>
+        <td><input aria-label="Hours per day" type="number" min="0" max="24" step="any" data-load-id="${attribute(load.id)}" data-load-field="hoursPerDay" value="${attribute(load.hoursPerDay)}" /></td>
         <td>
           <select aria-label="Current type" data-load-id="${attribute(load.id)}" data-load-field="currentType">
             <option value="DC" ${load.currentType === "DC" ? "selected" : ""}>DC</option>
             <option value="AC" ${load.currentType === "AC" ? "selected" : ""}>AC</option>
           </select>
         </td>
-        <td><input aria-label="Voltage" type="number" min="0" step="1" data-load-id="${attribute(load.id)}" data-load-field="voltage" value="${attribute(load.voltage)}" /></td>
-        <td><input aria-label="Surge multiplier" type="number" min="1" step="0.1" data-load-id="${attribute(load.id)}" data-load-field="surgeMultiplier" value="${attribute(load.surgeMultiplier)}" /></td>
+        <td><input aria-label="Voltage" type="number" min="1" max="1000" step="any" data-load-id="${attribute(load.id)}" data-load-field="voltage" value="${attribute(load.voltage)}" /></td>
+        <td><input aria-label="Surge multiplier" type="number" min="1" max="20" step="any" data-load-id="${attribute(load.id)}" data-load-field="surgeMultiplier" value="${attribute(load.surgeMultiplier)}" /></td>
         <td>
           <label class="check-cell">
-            <input type="checkbox" data-load-id="${attribute(load.id)}" data-load-field="critical" ${load.critical ? "checked" : ""} />
+            <input type="checkbox" aria-label="Critical load: ${attribute(load.name)}" data-load-id="${attribute(load.id)}" data-load-field="critical" ${load.critical ? "checked" : ""} />
           </label>
         </td>
         <td><button class="icon-button delete-button" type="button" data-remove-load="${attribute(load.id)}" aria-label="Remove ${attribute(load.name)}">×</button></td>
@@ -176,7 +226,7 @@ function renderLoadRows(project: Project) {
     .join("");
 }
 
-function hardwareInput(label: string, section: string, field: string, value: number, step = 1) {
+function hardwareInput(label: string, section: string, field: string, value: number, step: number | string = field.endsWith("Count") ? 1 : "any") {
   return input(label, `type="number" min="0" step="${step}" data-hardware-section="${section}" data-hardware-field="${field}"`, value);
 }
 
@@ -190,16 +240,16 @@ function accordionSummary(title: string, summary: string, amount = "", iconLabel
       <span class="accordion-title">
         ${icon(iconLabel)}
         <span>
-          <strong>${title}</strong>
-          <em>${summary}</em>
+          <strong>${escapeHtml(title)}</strong>
+          <em>${escapeHtml(summary)}</em>
         </span>
       </span>
-      ${amount ? `<span class="accordion-amount">${amount}</span>` : ""}
+      ${amount ? `<span class="accordion-amount">${escapeHtml(amount)}</span>` : ""}
     </summary>
   `;
 }
 
-function renderSideControls(project: Project, plan: EquipmentPlan, evaluations: { dc: EquipmentEvaluation; hybrid: EquipmentEvaluation }, generatedPlan: EquipmentPlan) {
+function renderSideControls(project: Project, plan: EquipmentPlan, evaluations: { dc: EquipmentEvaluation; hybrid: EquipmentEvaluation }, generatedPlan: EquipmentPlan, pricing: PricingSettings) {
   return `
     <section class="panel equipment-panel">
       <div class="panel-title-row">
@@ -210,6 +260,7 @@ function renderSideControls(project: Project, plan: EquipmentPlan, evaluations: 
         <button type="button" data-reset-equipment>Use generated values</button>
       </div>
 
+      <p class="comparison-note pricing-note">Generated plans select a practical regional product size for the load. Prices are editable USD allowances; entering a quote preserves it until changed.</p>
       <div class="accordion-list">
         <details>
           ${accordionSummary("Currency", `1 USD in ${project.currency}`, `${project.currency}`, "currency")}
@@ -220,101 +271,108 @@ function renderSideControls(project: Project, plan: EquipmentPlan, evaluations: 
                 ${currencyOptions.map((currency) => `<option value="${currency}" ${project.currency === currency ? "selected" : ""}>${currency}</option>`).join("")}
               </select>
             </label>
-            ${numberField("USD exchange rate", 'type="number" min="0" step="0.01" data-project-field="usdExchangeRate"', project.usdExchangeRate, `1 USD in ${project.currency}`)}
+            ${numberField("USD exchange rate", `type="number" min="0.000001" max="1000000" step="any" ${project.currency === "USD" ? "readonly" : ""} data-project-field="usdExchangeRate"`, project.usdExchangeRate, `1 USD in ${escapeHtml(project.currency)}`)}
           </div>
         </details>
 
         <details open>
-          ${accordionSummary("Solar Panels", `${plan.shared.panelCount} panels x ${plan.shared.panelWatts} W`, moneyUsd(project.pricing.panelUnitUsd), "solar")}
+          ${accordionSummary("Solar Panels", `${plan.shared.panelCount} panels x ${plan.shared.panelWatts} W`, `${moneyUsd(pricing.panelUnitUsd)} each`, "solar")}
           <div class="accordion-body mini-grid">
             ${hardwareInput("Panels", "shared", "panelCount", plan.shared.panelCount)}
             ${hardwareInput("Watts each", "shared", "panelWatts", plan.shared.panelWatts)}
-            ${priceInput("Price per panel", "panelUnitUsd", project.pricing.panelUnitUsd)}
+            ${priceInput("Price per panel", "panelUnitUsd", pricing.panelUnitUsd)}
           </div>
           <p class="comparison-note">Generated: ${generatedPlan.shared.panelCount} panel(s) x ${generatedPlan.shared.panelWatts} W. Current array: ${integerFormat.format(plan.shared.panelCount * plan.shared.panelWatts)} W.</p>
         </details>
 
         <details>
-          ${accordionSummary("Batteries", `${plan.shared.batteryCount} batteries x ${plan.shared.batteryVoltage} V ${plan.shared.batteryAh} Ah`, moneyUsd(project.pricing.batteryUnitUsd), "battery")}
+          ${accordionSummary("Batteries", `${plan.shared.batteryCount} batteries x ${plan.shared.batteryVoltage} V ${plan.shared.batteryAh} Ah`, `${moneyUsd(pricing.batteryUnitUsd)} each`, "battery")}
           <div class="accordion-body mini-grid">
+            ${productSelect("Battery reference", "batteries", plan.shared.batteryProductId, "battery")}
             ${hardwareInput("Batteries", "shared", "batteryCount", plan.shared.batteryCount)}
             ${hardwareInput("Voltage", "shared", "batteryVoltage", plan.shared.batteryVoltage)}
             ${hardwareInput("Ah each", "shared", "batteryAh", plan.shared.batteryAh)}
-            ${priceInput("Price per battery", "batteryUnitUsd", project.pricing.batteryUnitUsd)}
+            ${priceInput("Price per battery", "batteryUnitUsd", pricing.batteryUnitUsd)}
           </div>
           <p class="comparison-note">Generated: ${generatedPlan.shared.batteryCount} battery/batteries x ${generatedPlan.shared.batteryVoltage} V x ${generatedPlan.shared.batteryAh} Ah. Current storage: ${formatEnergy(plan.shared.batteryCount * plan.shared.batteryVoltage * plan.shared.batteryAh)}.</p>
+          <p class="comparison-note">${escapeHtml(productPriceNote("batteries", plan.shared.batteryProductId))}</p>
         </details>
 
         <details>
-          ${accordionSummary("DC Controller", `${plan.dc.controllerCount} controller, ${plan.dc.mpptAmps} A`, moneyUsd(project.pricing.controllerUnitUsd), "controller")}
+          ${accordionSummary("DC Controller", `${plan.dc.controllerCount} controller, ${plan.dc.mpptAmps} A`, `${moneyUsd(pricing.controllerUnitUsd)} each`, "controller")}
           <div class="accordion-body mini-grid">
+            ${productSelect("Controller reference", "chargeControllers", plan.dc.controllerProductId, "dc")}
             ${hardwareInput("Controllers", "dc", "controllerCount", plan.dc.controllerCount)}
             ${hardwareInput("MPPT amps", "dc", "mpptAmps", plan.dc.mpptAmps)}
-            ${priceInput("Price per controller", "controllerUnitUsd", project.pricing.controllerUnitUsd)}
+            ${priceInput("Price per controller", "controllerUnitUsd", pricing.controllerUnitUsd)}
           </div>
           ${renderWarnings(evaluations.dc)}
         </details>
 
         <details>
-          ${accordionSummary("Hybrid Inverter", `${plan.hybrid.inverterCount} inverter, ${plan.hybrid.inverterWatts} W`, moneyUsd(project.pricing.inverterUnitUsd), "inverter")}
+          ${accordionSummary("Hybrid Inverter", `${plan.hybrid.inverterCount} inverter, ${plan.hybrid.inverterWatts} W`, `${moneyUsd(pricing.inverterUnitUsd)} each`, "inverter")}
           <div class="accordion-body mini-grid">
+            ${productSelect("Inverter reference", "hybridInverters", plan.hybrid.inverterProductId, "inverter")}
+            ${productSelect("Separate controller reference", "chargeControllers", plan.hybrid.controllerProductId, "hybrid")}
             ${hardwareInput("Controllers", "hybrid", "controllerCount", plan.hybrid.controllerCount)}
             ${hardwareInput("MPPT amps", "hybrid", "mpptAmps", plan.hybrid.mpptAmps)}
+            ${priceInput("Price per separate controller", "hybridControllerUnitUsd", pricing.hybridControllerUnitUsd ?? pricing.controllerUnitUsd)}
             ${hardwareInput("Inverters", "hybrid", "inverterCount", plan.hybrid.inverterCount)}
             ${hardwareInput("Watts each", "hybrid", "inverterWatts", plan.hybrid.inverterWatts)}
-            ${priceInput("Price per inverter", "inverterUnitUsd", project.pricing.inverterUnitUsd)}
+            ${priceInput("Price per inverter", "inverterUnitUsd", pricing.inverterUnitUsd)}
           </div>
+          <p class="comparison-note">${escapeHtml(inverterDescription(plan))}</p>
+          <p class="comparison-note">${escapeHtml(productPriceNote("hybridInverters", plan.hybrid.inverterProductId))}</p>
           ${renderWarnings(evaluations.hybrid)}
         </details>
 
         <details>
-          ${accordionSummary("DC Distribution", `${plan.balance.dcDistributionCount} set`, moneyUsd(project.pricing.dcDistributionUnitUsd), "dcDist")}
+          ${accordionSummary("DC Distribution", `${plan.balance.dcDistributionCount} set`, moneyUsd(pricing.dcDistributionUnitUsd), "dcDist")}
           <div class="accordion-body mini-grid">
             ${hardwareInput("Quantity", "balance", "dcDistributionCount", plan.balance.dcDistributionCount)}
-            ${priceInput("Price per set", "dcDistributionUnitUsd", project.pricing.dcDistributionUnitUsd)}
+            ${priceInput("Price per set", "dcDistributionUnitUsd", pricing.dcDistributionUnitUsd)}
           </div>
         </details>
 
         <details>
-          ${accordionSummary("AC Distribution", `${plan.balance.acDistributionCount} set`, moneyUsd(project.pricing.acDistributionUnitUsd), "acDist")}
+          ${accordionSummary("AC Distribution", `${plan.balance.acDistributionCount} set`, moneyUsd(pricing.acDistributionUnitUsd), "acDist")}
           <div class="accordion-body mini-grid">
             ${hardwareInput("Quantity", "balance", "acDistributionCount", plan.balance.acDistributionCount)}
-            ${priceInput("Price per set", "acDistributionUnitUsd", project.pricing.acDistributionUnitUsd)}
+            ${priceInput("Price per set", "acDistributionUnitUsd", pricing.acDistributionUnitUsd)}
           </div>
         </details>
 
         <details>
-          ${accordionSummary("Cabling", `${plan.balance.cablingCount} kit`, moneyUsd(project.pricing.cablingUnitUsd), "cabling")}
+          ${accordionSummary("Cabling", `${plan.balance.cablingCount} kit`, moneyUsd(pricing.cablingUnitUsd), "cabling")}
           <div class="accordion-body mini-grid">
             ${hardwareInput("Quantity", "balance", "cablingCount", plan.balance.cablingCount)}
-            ${priceInput("Price per kit", "cablingUnitUsd", project.pricing.cablingUnitUsd)}
+            ${priceInput("Price per kit", "cablingUnitUsd", pricing.cablingUnitUsd)}
           </div>
         </details>
 
         <details>
-          ${accordionSummary("Earthing", `${plan.balance.earthingCount} kit`, moneyUsd(project.pricing.earthingUnitUsd), "earthing")}
+          ${accordionSummary("Earthing", `${plan.balance.earthingCount} kit`, moneyUsd(pricing.earthingUnitUsd), "earthing")}
           <div class="accordion-body mini-grid">
             ${hardwareInput("Quantity", "balance", "earthingCount", plan.balance.earthingCount)}
-            ${priceInput("Price per kit", "earthingUnitUsd", project.pricing.earthingUnitUsd)}
+            ${priceInput("Price per kit", "earthingUnitUsd", pricing.earthingUnitUsd)}
           </div>
         </details>
 
         <details>
-          ${accordionSummary("Monitoring", `${plan.balance.monitoringCount} kit`, moneyUsd(project.pricing.monitoringUnitUsd), "monitoring")}
+          ${accordionSummary("Monitoring", `${plan.balance.monitoringCount} kit`, moneyUsd(pricing.monitoringUnitUsd), "monitoring")}
           <div class="accordion-body mini-grid">
             ${hardwareInput("Quantity", "balance", "monitoringCount", plan.balance.monitoringCount)}
-            ${priceInput("Price per kit", "monitoringUnitUsd", project.pricing.monitoringUnitUsd)}
+            ${priceInput("Price per kit", "monitoringUnitUsd", pricing.monitoringUnitUsd)}
           </div>
         </details>
 
         <details>
           ${accordionSummary("Sizing Assumptions", "View all assumptions", "", "settings")}
           <div class="accordion-body mini-grid">
-            ${numberField("Default panel W", 'type="number" min="1" step="1" data-default-field="panelWatts"', project.equipmentDefaults.panelWatts)}
-            ${numberField("Default battery V", 'type="number" min="1" step="1" data-default-field="batteryVoltage"', project.equipmentDefaults.batteryVoltage)}
-            ${numberField("Default battery Ah", 'type="number" min="1" step="1" data-default-field="batteryAh"', project.equipmentDefaults.batteryAh)}
-            ${numberField("MPPT amp step", 'type="number" min="1" step="1" data-default-field="mpptAmpStep"', project.equipmentDefaults.mpptAmpStep)}
-            ${numberField("Inverter W step", 'type="number" min="1" step="1" data-default-field="inverterWattStep"', project.equipmentDefaults.inverterWattStep)}
+            ${numberField("Largest panel W", 'type="number" min="1" step="1" data-default-field="panelWatts"', project.equipmentDefaults.panelWatts)}
+            ${numberField("Preferred battery V", 'type="number" min="1" step="any" data-default-field="batteryVoltage"', project.equipmentDefaults.batteryVoltage)}
+            ${numberField("Preferred battery Ah", 'type="number" min="1" step="1" data-default-field="batteryAh"', project.equipmentDefaults.batteryAh)}
+            ${numberField("Preferred controller A", 'type="number" min="1" step="1" data-default-field="mpptAmpStep"', project.equipmentDefaults.mpptAmpStep)}
             ${[
               ["dcDistributionEfficiency", "DC efficiency"],
               ["hybridDcEfficiency", "Hybrid DC efficiency"],
@@ -349,36 +407,36 @@ function renderWarnings(evaluation: EquipmentEvaluation) {
 
   return `
     <ul class="warning-list">
-      ${evaluation.warnings.map((warning) => `<li>${warning}</li>`).join("")}
+      ${evaluation.warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}
     </ul>
   `;
 }
 
 function renderPlanner(project: Project) {
-  const { result, generatedPlan, plan, evaluations, costs, recommendations } = getProjectBundle(project, state.assumptions);
+  const { result, generatedPlan, plan, evaluations, costs, recommendations, pricing } = getProjectBundle(project, state.assumptions);
   const [dcCost, hybridCost] = costs;
   const selectedSystem = selectedSystemFor(project);
 
   return `
-    <main class="planner-grid">
+    <main class="planner-grid" id="planner" tabindex="-1">
       <div class="side-column">
         ${renderProjectPanel(project)}
-        ${renderSideControls(project, plan, evaluations, generatedPlan)}
+        ${renderSideControls(project, plan, evaluations, generatedPlan, pricing)}
       </div>
 
       <div class="main-column">
         <section class="panel metrics-panel">
-          <div class="metric">${icon("energy")}<span>Total daily energy</span><strong>${formatEnergy(result.totalDailyWh)}</strong><em>${integerFormat.format(result.totalDailyWh)} Wh</em></div>
-          <div class="metric">${icon("peak")}<span>Peak load</span><strong>${integerFormat.format(result.peakLoadW)} W</strong></div>
-          <div class="metric">${icon("surge")}<span>Surge load</span><strong>${integerFormat.format(result.surgeLoadW)} W</strong></div>
-          <div class="metric">${icon("critical")}<span>Critical load energy</span><strong>${formatEnergy(result.criticalDailyWh)}</strong><em>${integerFormat.format(result.criticalDailyWh)} Wh</em></div>
+          <div class="metric">${icon("energy")}<span>Total daily energy</span><strong>${formatEnergy(result.totalDailyWh)}</strong><em>${decimalFormat.format(result.totalDailyWh)} Wh</em></div>
+          <div class="metric">${icon("peak")}<span>Peak load</span><strong>${decimalFormat.format(result.peakLoadW)} W</strong></div>
+          <div class="metric">${icon("surge")}<span>Surge load</span><strong>${decimalFormat.format(result.surgeLoadW)} W</strong></div>
+          <div class="metric">${icon("critical")}<span>Critical load energy</span><strong>${formatEnergy(result.criticalDailyWh)}</strong><em>${decimalFormat.format(result.criticalDailyWh)} Wh</em></div>
         </section>
 
         <section class="panel loads-panel">
           <div class="panel-title-row">
             <div class="section-heading">
               <span>Loads</span>
-              <strong>${project.loads.length} device groups</strong>
+              <strong>${(loadDrafts.get(project.id) ?? project.loads).length} device groups</strong>
             </div>
             <div class="load-actions">
               <button type="button" data-calculate-loads>Calculate</button>
@@ -386,8 +444,10 @@ function renderPlanner(project: Project) {
             </div>
           </div>
           <div class="validation-summary" data-validation-summary role="alert" tabindex="-1" hidden></div>
-          <div class="table-wrap">
+          <p class="comparison-note" data-load-status role="status" aria-live="polite"></p>
+          <div class="table-wrap" tabindex="0" role="region" aria-label="Load table, scroll horizontally for more columns">
             <table class="editable-table">
+              <caption class="sr-only">Electrical loads. Watts and hours are per device; zero quantity or hours excludes a row from sizing.</caption>
               <thead>
                 <tr>
                   <th>Name</th>
@@ -398,7 +458,7 @@ function renderPlanner(project: Project) {
                   <th>Voltage (V)</th>
                   <th>Surge (x)</th>
                   <th>Critical</th>
-                  <th></th>
+                  <th><span class="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody>${renderLoadRows(project)}</tbody>
@@ -432,11 +492,12 @@ function renderPlanner(project: Project) {
                       <div><dt>Adjusted energy</dt><dd>${formatEnergy(sizing.adjustedDailyWh)}</dd></div>
                       <div><dt>Battery requirement</dt><dd>${formatEnergy(sizing.requiredBatteryWh)}</dd></div>
                       <div><dt>Solar requirement</dt><dd>${integerFormat.format(sizing.recommendedSolarArrayW)} W</dd></div>
-                      <div><dt>MPPT requirement</dt><dd>${sizing.recommendedMpptCurrentA} A</dd></div>
+                      <div><dt>MPPT requirement</dt><dd>${evaluation.checks.find((check) => check.label === "MPPT/controller")!.required} A</dd></div>
                       ${option.id === "hybrid" ? `<div><dt>Inverter requirement</dt><dd>${integerFormat.format(sizing.recommendedInverterW)} W</dd></div>` : ""}
-                      <div><dt>Estimate</dt><dd>${money(estimate.total, project)}</dd></div>
+                      <div><dt>Total planning estimate</dt><dd>${money(estimate.total, project)}</dd></div>
                     </dl>
                     ${renderWarnings(evaluation)}
+                    <details class="planning-notes"><summary>Planning notes</summary><ul>${evaluation.notes.map((note) => `<li>${escapeHtml(note)}</li>`).join("")}</ul></details>
                   </article>
                 `;
               })
@@ -447,6 +508,8 @@ function renderPlanner(project: Project) {
     </main>
 
     <section class="panel report-panel ${reportVisible ? "report-panel-ready" : "report-panel-gate"}">
+      <p data-report-pending role="status" hidden>Load changes pending. Calculate before generating or exporting the report.</p>
+      <div data-report-content>
       ${
         reportVisible
           ? `
@@ -461,7 +524,7 @@ function renderPlanner(project: Project) {
               <a class="button-link" href="#" data-export-csv>Export CSV</a>
             </div>
           </div>
-          <div id="report">${renderProjectReport(project, state.assumptions, brands)}</div>
+          <div id="report" tabindex="-1" aria-label="${attribute(systemOptionName(selectedSystem))} report">${renderProjectReport(project, state.assumptions, brands)}</div>
         </div>
       `
           : `
@@ -475,6 +538,7 @@ function renderPlanner(project: Project) {
         </div>
       `
       }
+      </div>
     </section>
   `;
 }
@@ -492,6 +556,7 @@ function render() {
 
   app.innerHTML = `
     <div class="app-shell">
+      <a class="skip-link" href="#planner">Skip to planner</a>
       <header class="topbar">
         <div class="brand-lockup">
           <div class="brand-mark" aria-hidden="true">
@@ -509,23 +574,87 @@ function render() {
           <button type="button" data-load-sample>Sample</button>
         </div>
       </header>
-      ${persistenceNotice ? `<div class="persistence-notice" role="status">${escapeHtml(persistenceNotice)}</div>` : ""}
+      <div class="persistence-notice" data-persistence-notice role="status" ${persistenceNotice ? "" : "hidden"}>${escapeHtml(persistenceNotice)}</div>
       ${renderPlanner(project)}
     </div>
   `;
 
   bindEvents();
+  updatePendingState();
+}
+
+// Keep form nodes alive on committed sidebar edits, including keyboard focus.
+function refreshResults() {
+  const project = activeProject();
+  const template = document.createElement("template");
+  template.innerHTML = renderPlanner(project);
+  for (const selector of [".metrics-panel", ".recommendations-panel", ".report-panel"]) {
+    document.querySelector(selector)?.replaceWith(template.content.querySelector(selector)!);
+  }
+  const freshEquipment = template.content.querySelector(".equipment-panel")!;
+  document.querySelectorAll(".equipment-panel summary").forEach((summary, index) => {
+    summary.innerHTML = freshEquipment.querySelectorAll("summary")[index].innerHTML;
+  });
+  document.querySelectorAll(".equipment-panel details .comparison-note, .equipment-panel .warning-list, .equipment-panel .pass-note").forEach((node) => node.remove());
+  document.querySelectorAll(".equipment-panel details").forEach((detail, index) => {
+    freshEquipment.querySelectorAll("details")[index].querySelectorAll(".comparison-note, .warning-list, .pass-note").forEach((note) => detail.append(note.cloneNode(true)));
+  });
+  document.querySelectorAll<HTMLInputElement>("[data-hardware-field]").forEach((field) => {
+    const fresh = freshEquipment.querySelector<HTMLInputElement>(`[data-hardware-section="${field.dataset.hardwareSection}"][data-hardware-field="${field.dataset.hardwareField}"]`);
+    if (fresh && !field.hasAttribute("data-pending")) field.value = fresh.value;
+  });
+  document.querySelectorAll<HTMLInputElement>("[data-pricing-field]").forEach((field) => {
+    const fresh = freshEquipment.querySelector<HTMLInputElement>(`[data-pricing-field="${field.dataset.pricingField}"]`);
+    if (fresh && !field.hasAttribute("data-pending")) field.value = fresh.value;
+  });
+  document.querySelectorAll<HTMLSelectElement>("[data-product-target]").forEach((field) => {
+    const fresh = freshEquipment.querySelector<HTMLSelectElement>(`[data-product-target="${field.dataset.productTarget}"]`);
+    if (fresh) field.innerHTML = fresh.innerHTML;
+  });
+  document.querySelector(".equipment-panel .section-heading strong")!.textContent = project.equipmentPlanMode === "custom" ? "Edited plan" : "Load-generated plan";
+  document.querySelector(".project-panel .section-heading strong")!.textContent = project.name;
+  const switcher = document.querySelector<HTMLSelectElement>("[data-project-switch]")!;
+  switcher.selectedOptions[0].textContent = project.name;
+  const rate = document.querySelector<HTMLInputElement>('[data-project-field="usdExchangeRate"]')!;
+  if (!rate.hasAttribute("data-pending") || project.currency === "USD") {
+    rate.value = String(project.usdExchangeRate);
+    rate.removeAttribute("data-pending");
+    rate.removeAttribute("aria-invalid");
+    rate.setCustomValidity("");
+  }
+  rate.readOnly = project.currency === "USD";
+  rate.parentElement!.querySelector("em")!.textContent = `1 USD in ${project.currency}`;
+  bindReportEvents();
+  labelStructure();
+  updatePendingState();
+}
+
+function labelStructure() {
+  document.querySelectorAll("th").forEach((cell) => cell.setAttribute("scope", "col"));
+  document.querySelectorAll(".section-heading > span").forEach((heading) => { heading.setAttribute("role", "heading"); heading.setAttribute("aria-level", "2"); });
+  document.querySelectorAll<HTMLTableElement>(".report-table").forEach((table) => {
+    const label = table.closest("section")?.querySelector("h2")?.textContent ?? "Report table";
+    table.setAttribute("aria-label", label);
+    if (!table.parentElement?.classList.contains("report-table-scroll")) {
+      const scrollRegion = document.createElement("div");
+      scrollRegion.className = "report-table-scroll";
+      scrollRegion.tabIndex = 0;
+      scrollRegion.setAttribute("role", "region");
+      scrollRegion.setAttribute("aria-label", `${label}, scroll horizontally for more columns`);
+      table.before(scrollRegion);
+      scrollRegion.append(table);
+    }
+  });
 }
 
 function collectLoadTable(project: Project): Project["loads"] {
   const rows = Array.from(document.querySelectorAll<HTMLTableRowElement>("[data-load-row]"));
-  if (rows.length === 0) return project.loads;
+  if (rows.length === 0) return loadDrafts.get(project.id) ?? project.loads;
 
   const readField = (row: HTMLTableRowElement, field: string) =>
     row.querySelector<HTMLInputElement | HTMLSelectElement>(`[data-load-field="${field}"]`);
   const readNumber = (row: HTMLTableRowElement, field: string, fallback: number) => {
-    const value = Number(readField(row, field)?.value);
-    return Number.isFinite(value) ? value : fallback;
+    return (readField(row, field) as HTMLInputElement | null)?.valueAsNumber ?? fallback;
   };
 
   return rows.map((row) => {
@@ -558,20 +687,59 @@ function showValidationIssues(issues: ValidationIssue[]) {
     return;
   }
 
-  summary.innerHTML = `<strong>Check the load table before calculating:</strong><ul>${issues.map((issue) => `<li>${escapeHtml(issue.message)}</li>`).join("")}</ul>`;
+  document.querySelectorAll("[data-load-field]").forEach((field) => field.removeAttribute("aria-invalid"));
+  summary.innerHTML = `<strong>Check these values before calculating:</strong><ul>${issues.map((issue, index) => {
+    const [, row, field] = issue.path.split(".");
+    const control = document.querySelectorAll("[data-load-row]")[Number(row)]?.querySelector(`[data-load-field="${field}"]`);
+    control?.setAttribute("aria-invalid", "true");
+    control?.setAttribute("aria-describedby", `validation-${index}`);
+    return `<li id="validation-${index}">${escapeHtml(issue.message)}</li>`;
+  }).join("")}</ul>`;
   summary.hidden = false;
   summary.focus();
 }
 
 function controlIsValid(target: HTMLInputElement | HTMLSelectElement): boolean {
   target.setCustomValidity("");
-  if (target.checkValidity()) return true;
+  if (target.checkValidity()) {
+    target.removeAttribute("aria-invalid");
+    target.removeAttribute("data-pending");
+    return true;
+  }
+  target.setAttribute("aria-invalid", "true");
   target.reportValidity();
   return false;
 }
 
 function bindEvents() {
+  labelStructure();
+  document.querySelectorAll<HTMLInputElement>('[type="number"]').forEach((field) => { field.required = true; if (!field.max) field.max = "1000000"; });
+  document.querySelectorAll<HTMLInputElement>("[data-project-field], [data-hardware-field], [data-default-field], [data-pricing-field], [data-assumption-field]").forEach((field) => {
+    field.addEventListener("input", () => {
+      field.setCustomValidity("");
+      field.setAttribute("data-pending", "true");
+      updatePendingState();
+    });
+    // Returning to the original value may not emit change, but still finishes an edit.
+    field.addEventListener("blur", () => {
+      if (field.hasAttribute("data-pending")) field.dispatchEvent(new Event("change"));
+    });
+  });
+  document.querySelectorAll<HTMLElement>("[data-load-row]").forEach((row, index) => {
+    row.querySelectorAll<HTMLElement>("[data-load-field]").forEach((field) => {
+      field.setAttribute("aria-label", `${field.getAttribute("aria-label") ?? field.dataset.loadField}, row ${index + 1}`);
+      const stage = () => {
+        loadDrafts.set(activeProject().id, collectLoadTable(activeProject()));
+        field.removeAttribute("aria-invalid");
+        field.removeAttribute("aria-describedby");
+        updatePendingState();
+      };
+      field.addEventListener("input", stage);
+      field.addEventListener("change", stage);
+    });
+  });
   document.querySelector("[data-project-switch]")?.addEventListener("change", (event) => {
+    reportVisible = false;
     state.activeProjectId = (event.target as HTMLSelectElement).value;
     saveState();
     render();
@@ -585,13 +753,17 @@ function bindEvents() {
       const project = clone(activeProject());
       const field = target.dataset.projectField as keyof Project;
       (project[field] as string | number) = numericFields.has(field) ? Number(target.value) : target.value;
-      setActiveProject(project, Boolean(target.closest(".equipment-panel")));
+      const issue = validateProject(project).find((item) => item.path === field);
+      if (issue) { target.setAttribute("data-pending", "true"); target.setAttribute("aria-invalid", "true"); target.setCustomValidity(issue.message); target.reportValidity(); return; }
+      setActiveProject(project, true);
     };
 
     inputElement.addEventListener("change", updateProjectField);
   });
 
   document.querySelector("[data-calculate-loads]")?.addEventListener("click", () => {
+    const pending = document.querySelector<HTMLInputElement>("[data-pending]");
+    if (pending) { pending.focus(); pending.reportValidity(); return; }
     const project = clone(activeProject());
     project.loads = collectLoadTable(project);
     const issues = [...validateProject(project), ...validateAssumptions(state.assumptions)];
@@ -600,18 +772,29 @@ function bindEvents() {
       return;
     }
     showValidationIssues([]);
+    loadDrafts.delete(project.id);
+    const uiState = captureEquipmentUiState();
     setActiveProject(project);
+    restoreEquipmentUiState(uiState);
+    document.querySelector<HTMLElement>("[data-calculate-loads]")?.focus({ preventScroll: true });
   });
 
   document.querySelectorAll("[data-remove-load]").forEach((button) => {
     button.addEventListener("click", () => {
+      const pending = document.querySelector<HTMLInputElement>("[data-pending]");
+      if (pending) { pending.focus(); pending.reportValidity(); return; }
       const project = clone(activeProject());
-      project.loads = collectLoadTable(project).filter((load) => load.id !== (button as HTMLButtonElement).dataset.removeLoad);
-      setActiveProject(project);
+      loadDrafts.set(project.id, collectLoadTable(project).filter((load) => load.id !== (button as HTMLButtonElement).dataset.removeLoad));
+      const uiState = captureEquipmentUiState();
+      render();
+      restoreEquipmentUiState(uiState);
+      document.querySelector<HTMLElement>("[data-add-load]")?.focus({ preventScroll: true });
     });
   });
 
   document.querySelector("[data-add-load]")?.addEventListener("click", () => {
+    const pending = document.querySelector<HTMLInputElement>("[data-pending]");
+    if (pending) { pending.focus(); pending.reportValidity(); return; }
     const project = clone(activeProject());
     project.loads = collectLoadTable(project);
     project.loads.push({
@@ -625,7 +808,12 @@ function bindEvents() {
       surgeMultiplier: 1.1,
       critical: false,
     });
-    setActiveProject(project);
+    loadDrafts.set(project.id, project.loads);
+    const uiState = captureEquipmentUiState();
+    render();
+    restoreEquipmentUiState(uiState);
+    const names = document.querySelectorAll<HTMLInputElement>('[data-load-field="name"]');
+    names[names.length - 1]?.focus();
   });
 
   document.querySelectorAll("[data-hardware-field]").forEach((inputElement) => {
@@ -633,11 +821,16 @@ function bindEvents() {
       const target = event.target as HTMLInputElement;
       if (!controlIsValid(target)) return;
       const project = clone(activeProject());
-      const generatedPlan = generateEquipmentPlan(calculateProject(project, state.assumptions), project.equipmentDefaults);
+      project.pricing = { ...getProjectBundle(project, state.assumptions).pricing };
+      const generatedPlan = generateEquipmentPlan(calculateProject(project, state.assumptions), project.equipmentDefaults, project, state.assumptions);
       const plan = clone(currentPlan(project, generatedPlan));
       const section = target.dataset.hardwareSection as keyof EquipmentPlan;
       const field = target.dataset.hardwareField ?? "";
       (plan[section] as unknown as Record<string, number>)[field] = Number(target.value);
+      if (section === "shared" && ["batteryVoltage", "batteryAh"].includes(field)) plan.shared.batteryProductId = undefined;
+      if (section === "shared" && field === "panelWatts") plan.shared.panelProductId = undefined;
+      if ((section === "dc" || section === "hybrid") && field === "mpptAmps") plan[section].controllerProductId = undefined;
+      if (section === "hybrid" && field === "inverterWatts") plan.hybrid.inverterProductId = undefined;
       const issue = validateEquipmentPlan(plan).find((item) => item.path === `${section}.${field}`);
       if (issue) {
         target.setCustomValidity(issue.message);
@@ -652,7 +845,45 @@ function bindEvents() {
     inputElement.addEventListener("change", updateHardware);
   });
 
+  document.querySelectorAll<HTMLSelectElement>("[data-product-target]").forEach((select) => {
+    select.addEventListener("change", () => {
+      const project = clone(activeProject());
+      const bundle = getProjectBundle(project, state.assumptions);
+      const plan = clone(bundle.plan);
+      project.pricing = { ...bundle.pricing };
+      const item = catalog[select.dataset.productCategory as keyof ProductCatalog].find((product) => product.id === select.value);
+      const target = select.dataset.productTarget;
+      if (target === "battery") {
+        plan.shared.batteryProductId = item?.id;
+        if (item) { plan.shared.batteryVoltage = item.voltage!; plan.shared.batteryAh = item.ampHours!; project.pricing.batteryUnitUsd = item.unitCost; }
+      } else if (target === "inverter") {
+        plan.hybrid.inverterProductId = item?.id;
+        if (item) {
+          plan.hybrid.inverterWatts = item.watts!;
+          project.pricing.inverterUnitUsd = item.unitCost;
+          if (item.systemVoltage === project.systemVoltage && plan.hybrid.inverterCount === 1) {
+            const controller = catalog.chargeControllers.find((candidate) => candidate.id === plan.hybrid.controllerProductId && candidate.amps === plan.hybrid.mpptAmps);
+            const arrayW = plan.shared.panelCount * plan.shared.panelWatts;
+            const requiredA = Math.max(bundle.result.hybrid.recommendedMpptCurrentA, requiredControllerAmps(arrayW, project, state.assumptions));
+            plan.hybrid.controllerCount = supplementaryControllers(item, controller, project.systemVoltage, arrayW, requiredA) ?? plan.hybrid.controllerCount;
+          }
+        }
+      } else if (target === "dc" || target === "hybrid") {
+        plan[target].controllerProductId = item?.id;
+        if (item) {
+          plan[target].mpptAmps = item.amps!;
+          if (target === "dc") project.pricing.controllerUnitUsd = item.unitCost;
+          else project.pricing.hybridControllerUnitUsd = item.unitCost;
+        }
+      }
+      project.equipmentPlan = plan;
+      project.equipmentPlanMode = "custom";
+      setActiveProject(project, true);
+    });
+  });
+
   document.querySelector("[data-reset-equipment]")?.addEventListener("click", () => {
+    document.querySelectorAll<HTMLInputElement>("[data-hardware-field]").forEach((field) => { field.removeAttribute("data-pending"); field.removeAttribute("aria-invalid"); field.setCustomValidity(""); });
     const project = clone(activeProject());
     project.equipmentPlan = undefined;
     project.equipmentPlanMode = "generated";
@@ -675,8 +906,11 @@ function bindEvents() {
       const target = event.target as HTMLInputElement;
       if (!controlIsValid(target)) return;
       const project = clone(activeProject());
+      project.pricing = { ...getProjectBundle(project, state.assumptions).pricing };
       const field = target.dataset.pricingField as keyof PricingSettings;
       project.pricing[field] = Number(target.value);
+      project.equipmentPlan = currentPlan(project, generateEquipmentPlan(calculateProject(project, state.assumptions), project.equipmentDefaults, project, state.assumptions));
+      project.equipmentPlanMode = "custom";
       setActiveProject(project, true);
     };
 
@@ -696,17 +930,17 @@ function bindEvents() {
         return;
       }
       state.assumptions = assumptions;
-      const equipmentUiState = captureEquipmentUiState();
       saveState();
-      render();
-      restoreEquipmentUiState(equipmentUiState);
+      refreshResults();
     });
   });
 
   document.querySelector("[data-new-project]")?.addEventListener("click", () => {
+    reportVisible = false;
     const project = normalizeProject(clone(sampleProjectData) as Project);
     project.id = uid();
     project.name = "Untitled solar project";
+    project.loads = [];
     project.updatedAt = new Date().toISOString();
     state.projects = [...state.projects, project];
     state.activeProjectId = project.id;
@@ -715,6 +949,7 @@ function bindEvents() {
   });
 
   document.querySelector("[data-load-sample]")?.addEventListener("click", () => {
+    reportVisible = false;
     const sample = normalizeProject(clone(sampleProjectData) as Project);
     sample.id = uid();
     sample.updatedAt = new Date().toISOString();
@@ -724,24 +959,32 @@ function bindEvents() {
     render();
   });
 
+  bindReportEvents();
+}
+
+function bindReportEvents() {
   document.querySelector("[data-generate-report]")?.addEventListener("click", () => {
+    if (hasPendingInputs()) return;
     reportVisible = true;
-    render();
-    document.querySelector(".report-panel-ready")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    refreshResults();
+    document.querySelector<HTMLElement>("#report")?.focus({ preventScroll: true });
+    document.querySelector(".report-panel-ready")?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "start" });
   });
 
   document.querySelectorAll("[data-print]").forEach((button) => {
     button.addEventListener("click", () => {
-      window.print();
+      if (!hasPendingInputs()) window.print();
     });
   });
 
   const exportLink = document.querySelector<HTMLAnchorElement>("[data-export-csv]");
   if (exportLink) {
+    if (csvObjectUrl) URL.revokeObjectURL(csvObjectUrl);
     const project = activeProject();
     csvObjectUrl = createCsvObjectUrl(buildProjectCsv(project, state.assumptions, brands));
     exportLink.href = csvObjectUrl;
     exportLink.download = projectCsvFilename(project);
+    exportLink.addEventListener("click", (event) => { if (hasPendingInputs()) event.preventDefault(); });
   }
 
 }

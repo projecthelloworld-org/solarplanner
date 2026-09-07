@@ -24,30 +24,32 @@ export const STORAGE_SCHEMA_VERSION = 1;
 
 const defaultProducts = productsData as ProductCatalog;
 const defaultAssumptions = assumptionsData as Assumptions;
+const productCost = (group: keyof ProductCatalog, id: string): number => defaultProducts[group].find((item) => item.id === id)?.unitCost ?? 0;
 
 const defaultEquipmentDefaults: EquipmentDefaults = {
   panelWatts: 450,
-  batteryVoltage: 24,
+  batteryVoltage: 25.6,
   batteryAh: 100,
-  mpptAmpStep: 10,
-  inverterWattStep: 500,
+  mpptAmpStep: 60,
+  inverterWattStep: 1000,
 };
 
 const defaultPricing: PricingSettings = {
-  panelUnitUsd: defaultProducts.solarPanels[1]?.unitCost ?? 245,
-  batteryUnitUsd: defaultProducts.batteries[1]?.unitCost ?? 560,
-  controllerUnitUsd: defaultProducts.chargeControllers[1]?.unitCost ?? 260,
-  inverterUnitUsd: defaultProducts.hybridInverters[1]?.unitCost ?? 690,
-  dcDistributionUnitUsd: defaultProducts.dcDistribution[0]?.unitCost ?? 180,
-  acDistributionUnitUsd: defaultProducts.acDistribution[0]?.unitCost ?? 220,
-  cablingUnitUsd: defaultProducts.cabling[0]?.unitCost ?? 210,
-  earthingUnitUsd: defaultProducts.earthing[0]?.unitCost ?? 190,
-  monitoringUnitUsd: defaultProducts.monitoring[0]?.unitCost ?? 155,
+  panelUnitUsd: productCost("solarPanels", "pv-450"),
+  batteryUnitUsd: productCost("batteries", "bat-2560"),
+  controllerUnitUsd: productCost("chargeControllers", "mppt-60"),
+  inverterUnitUsd: productCost("hybridInverters", "hybrid-1000"),
+  dcDistributionUnitUsd: productCost("dcDistribution", "dc-board"),
+  acDistributionUnitUsd: productCost("acDistribution", "ac-board"),
+  cablingUnitUsd: productCost("cabling", "cable-kit"),
+  earthingUnitUsd: productCost("earthing", "earth-kit"),
+  monitoringUnitUsd: productCost("monitoring", "monitor-kit"),
 };
 
 const toCents = (value: number): number => Math.round(value * 100) / 100;
 
-const boundedNumber = (value: unknown, fallback: number, minimum: number, maximum = Number.MAX_SAFE_INTEGER, integer = false): number => {
+const boundedNumber = (value: unknown, fallback: number, minimum: number, maximum = 1_000_000, integer = false): number => {
+  if (value === null || value === "" || typeof value === "boolean") return fallback;
   const candidate = Number(value);
   if (!Number.isFinite(candidate) || candidate < minimum || candidate > maximum) return fallback;
   return integer ? Math.floor(candidate) : candidate;
@@ -68,6 +70,7 @@ function normalizePricing(input: unknown = {}): PricingSettings {
       defaultPricing.batteryUnitUsd,
     ),
     controllerUnitUsd: price(rawPricing.controllerUnitUsd ?? rawPricing.chargeControllerUsd, defaultPricing.controllerUnitUsd),
+    hybridControllerUnitUsd: rawPricing.hybridControllerUnitUsd === undefined ? undefined : price(rawPricing.hybridControllerUnitUsd, defaultPricing.controllerUnitUsd),
     inverterUnitUsd: legacyPrice(rawPricing.inverterUnitUsd, rawPricing.inverterUsdPerW, defaultEquipmentDefaults.inverterWattStep, defaultPricing.inverterUnitUsd),
     dcDistributionUnitUsd: price(rawPricing.dcDistributionUnitUsd ?? rawPricing.dcDistributionUsd, defaultPricing.dcDistributionUnitUsd),
     acDistributionUnitUsd: price(rawPricing.acDistributionUnitUsd ?? rawPricing.acDistributionUsd, defaultPricing.acDistributionUnitUsd),
@@ -91,6 +94,8 @@ function normalizeEquipmentPlan(plan: Project["equipmentPlan"]): Project["equipm
 
   return {
     shared: {
+      panelProductId: typeof plan.shared?.panelProductId === "string" ? plan.shared.panelProductId : undefined,
+      batteryProductId: typeof plan.shared?.batteryProductId === "string" ? plan.shared.batteryProductId : undefined,
       panelCount: boundedNumber(plan.shared?.panelCount, 1, 0, Number.MAX_SAFE_INTEGER, true),
       panelWatts: boundedNumber(plan.shared?.panelWatts, defaultEquipmentDefaults.panelWatts, 0),
       batteryCount: boundedNumber(plan.shared?.batteryCount, 1, 0, Number.MAX_SAFE_INTEGER, true),
@@ -98,10 +103,13 @@ function normalizeEquipmentPlan(plan: Project["equipmentPlan"]): Project["equipm
       batteryAh: boundedNumber(plan.shared?.batteryAh, defaultEquipmentDefaults.batteryAh, 0),
     },
     dc: {
+      controllerProductId: typeof plan.dc?.controllerProductId === "string" ? plan.dc.controllerProductId : undefined,
       controllerCount: boundedNumber(plan.dc?.controllerCount, 1, 0, Number.MAX_SAFE_INTEGER, true),
       mpptAmps: boundedNumber(plan.dc?.mpptAmps, defaultEquipmentDefaults.mpptAmpStep, 0),
     },
     hybrid: {
+      controllerProductId: typeof plan.hybrid?.controllerProductId === "string" ? plan.hybrid.controllerProductId : undefined,
+      inverterProductId: typeof plan.hybrid?.inverterProductId === "string" ? plan.hybrid.inverterProductId : undefined,
       controllerCount: boundedNumber(plan.hybrid?.controllerCount, 1, 0, Number.MAX_SAFE_INTEGER, true),
       mpptAmps: boundedNumber(plan.hybrid?.mpptAmps, defaultEquipmentDefaults.mpptAmpStep, 0),
       inverterCount: boundedNumber(plan.hybrid?.inverterCount, 1, 0, Number.MAX_SAFE_INTEGER, true),
@@ -119,10 +127,13 @@ function normalizeEquipmentPlan(plan: Project["equipmentPlan"]): Project["equipm
 
 function normalizeLoads(value: unknown, fallback: Project["loads"], systemVoltage: number): Project["loads"] {
   if (!Array.isArray(value)) return fallback;
+  const ids = new Set<string>();
   return value.map((raw, index) => {
     const load = raw && typeof raw === "object" ? (raw as Partial<Project["loads"][number]>) : {};
+    const id = typeof load.id === "string" && load.id && !ids.has(load.id) ? load.id : uid();
+    ids.add(id);
     return {
-      id: typeof load.id === "string" && load.id ? load.id : uid(),
+      id,
       name: typeof load.name === "string" && load.name.trim() ? load.name : `Load ${index + 1}`,
       quantity: boundedNumber(load.quantity, 1, 0, Number.MAX_SAFE_INTEGER, true),
       watts: boundedNumber(load.watts, 0, 0),
@@ -142,10 +153,11 @@ export function normalizeProject(rawProject: Partial<Project>): Project {
 
   return {
     ...project,
+    id: typeof project.id === "string" && project.id ? project.id : uid(),
     name: typeof project.name === "string" && project.name.trim() ? project.name : fallback.name,
     country: typeof project.country === "string" && project.country.trim() ? project.country : fallback.country,
-    currency: typeof project.currency === "string" && project.currency ? project.currency : "USD",
-    usdExchangeRate: boundedNumber(project.usdExchangeRate, 1, 0.000001, 1_000_000),
+    currency: typeof project.currency === "string" && /^[A-Z]{3}$/.test(project.currency) ? project.currency : "USD",
+    usdExchangeRate: typeof project.currency !== "string" || !/^[A-Z]{3}$/.test(project.currency) || project.currency === "USD" ? 1 : boundedNumber(project.usdExchangeRate, 1, 0.000001, 1_000_000),
     systemVoltage,
     sunHours: boundedNumber(project.sunHours, fallback.sunHours, 0.5, 24),
     autonomyDays: boundedNumber(project.autonomyDays, fallback.autonomyDays, 0.5, 30),
@@ -176,9 +188,10 @@ function fallbackState(): AppState {
   };
 }
 
-export function loadAppState(storage: Storage): LoadStateResult {
+export function loadAppState(storage: Storage | undefined): LoadStateResult {
   const fallback = fallbackState();
   try {
+    if (!storage) throw new Error("Storage unavailable");
     const saved = storage.getItem(STORAGE_KEY);
     if (!saved) return { state: fallback, notice: "" };
 
@@ -199,9 +212,9 @@ export function loadAppState(storage: Storage): LoadStateResult {
   } catch {
     let recoveryPreserved = false;
     try {
-      const damagedState = storage.getItem(STORAGE_KEY);
+      const damagedState = storage?.getItem(STORAGE_KEY);
       if (damagedState) {
-        storage.setItem(RECOVERY_STORAGE_KEY, damagedState);
+        storage!.setItem(RECOVERY_STORAGE_KEY, damagedState);
         recoveryPreserved = true;
       }
     } catch {
@@ -216,8 +229,9 @@ export function loadAppState(storage: Storage): LoadStateResult {
   }
 }
 
-export function saveAppState(state: AppState, storage: Storage): string {
+export function saveAppState(state: AppState, storage: Storage | undefined): string {
   try {
+    if (!storage) throw new Error("Storage unavailable");
     storage.setItem(STORAGE_KEY, JSON.stringify({ ...state, schemaVersion: STORAGE_SCHEMA_VERSION }));
     return "";
   } catch {
