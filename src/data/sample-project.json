@@ -11,21 +11,21 @@
   "selectedSystem": "dc",
   "equipmentDefaults": {
     "panelWatts": 450,
-    "batteryVoltage": 24,
+    "batteryVoltage": 25.6,
     "batteryAh": 100,
-    "mpptAmpStep": 10,
-    "inverterWattStep": 500
+    "mpptAmpStep": 60,
+    "inverterWattStep": 1000
   },
   "pricing": {
-    "panelUnitUsd": 245,
-    "batteryUnitUsd": 560,
-    "controllerUnitUsd": 260,
-    "inverterUnitUsd": 690,
-    "dcDistributionUnitUsd": 180,
-    "acDistributionUnitUsd": 220,
-    "cablingUnitUsd": 210,
-    "earthingUnitUsd": 190,
-    "monitoringUnitUsd": 155
+    "panelUnitUsd": 110,
+    "batteryUnitUsd": 500,
+    "controllerUnitUsd": 150,
+    "inverterUnitUsd": 220,
+    "dcDistributionUnitUsd": 100,
+    "acDistributionUnitUsd": 90,
+    "cablingUnitUsd": 140,
+    "earthingUnitUsd": 140,
+    "monitoringUnitUsd": 150
   },
   "equipmentPlanMode": "generated",
   "updatedAt": "2026-05-19T00:00:00.000Z",

@@ -6,7 +6,7 @@ This document applies only to the `phw` branch and the Project Hello World deplo
 https://tools.myhellohub.org
 ```
 
-Partners deploying only Hello Solar Planner should use the `v1.0.0` release tag and follow `docs/DEPLOYMENT.md` instead.
+Partners deploying only Hello Solar Planner should use the `v1.2.0` release tag and follow `docs/DEPLOYMENT.md` instead.
 
 ## URL Structure
 

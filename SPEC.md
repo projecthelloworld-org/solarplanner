@@ -44,7 +44,7 @@ Project Summary includes:
 - autonomy days
 - System Option
 
-The v1 user interface does not expose a Brand Profile selector. Legacy/internal brand metadata may still be used by the report renderer, but it does not affect calculations, prices, assumptions, or equipment generation.
+The v1 user interface does not expose a Brand Profile selector. Report branding metadata does not affect calculations, prices, assumptions, or equipment generation.
 
 ## Load Fields
 
@@ -61,9 +61,9 @@ Each load item includes:
 
 The load table is the source of truth for demand after the user clicks **Calculate**.
 
-## Calculation Engine
+Edits, added rows, and deleted rows remain drafts until Calculate. Sidebar edits do not discard those drafts. Pending load edits hide report actions and report content so an old result cannot be exported as the new plan. Blank numeric fields are errors, not zero. Drafts stay in memory while switching projects in the same session; only calculated loads are saved across reloads. New Project starts with an empty load list; Sample creates the example setup.
 
-The main calculation engine lives in `src/engine/calculations.ts`.
+## Calculation Engine
 
 ### Load Energy
 
@@ -96,6 +96,8 @@ peak load W = sum(quantity x watts for every load)
 
 This estimates the simultaneous running load if all listed loads are operating at once.
 
+Rows with zero quantity or zero hours are inactive and excluded from both power and energy sizing. Watts may be fractional. Internal energy arithmetic retains fractions; presentation rounds to two decimal places. Surge assumes the entire largest-starting group starts together with other groups running, not that every group starts simultaneously.
+
 ### Surge Load
 
 Each load has a surge multiplier. The app estimates the worst surge case by assuming one load group surges while all other loads continue running:
@@ -106,7 +108,7 @@ system surge W = highest value of:
   peak load W - load running watts + load surge watts
 ```
 
-This is mainly used for Hybrid inverter sizing.
+The whole-system value is a dashboard demand indicator. Hybrid inverter sizing uses the equivalent running and surge values calculated from AC loads only.
 
 ### Critical Energy
 
@@ -115,6 +117,8 @@ critical daily Wh = sum(daily Wh for critical loads)
 ```
 
 This helps show how much of the demand is marked as essential.
+
+The critical flag does not remove other loads from autonomy or equipment sizing.
 
 ## Option Energy Adjustments
 
@@ -153,6 +157,8 @@ required battery Wh =
 ```
 
 Battery sizing is rounded up to the next 100 Wh.
+
+This is required **nominal** storage; depth of discharge has already been accounted for once. Installed nominal Wh is quantity x nameplate voltage x Ah. Usable Wh is nominal Wh x DoD. Do not compare usable installed Wh against this nominal requirement. Energy capacity does not establish that battery/BMS peak discharge current is sufficient.
 
 Interpretation:
 
@@ -195,6 +201,8 @@ recommended MPPT current A =
 
 MPPT sizing is rounded up to the next 5 A.
 
+Generation and adequacy checks also calculate current from the **installed** panel count x panel watts. The displayed requirement is the greater of demand-based and installed-array current. Compatible whole controllers cover both this current and documented PV input power; Hybrid integrated MPPT contributes once. Multiple controllers need independently allocated PV strings and coordinated battery charging. The planner checks nominal voltage and rated input power but cannot validate string Voc, Isc, cold-weather voltage or BMS charge limits without those site specifications. The 1.25 factor remains an editable planning margin; approved PV oversizing/clipping can differ.
+
 Interpretation:
 
 - Larger solar arrays require more controller current.
@@ -203,29 +211,40 @@ Interpretation:
 
 ## Hybrid Inverter Sizing
 
-The Hybrid option sizes an inverter from peak load and estimated surge:
+The Hybrid option sizes an inverter from AC loads only. DC loads do not pass through the inverter and therefore do not increase its power rating.
 
 ```text
-inverter base W = max(peak load W, surge load W x 0.55)
-recommended inverter W = inverter base W x inverter headroom factor
+AC peak load W = sum(running watts for AC loads)
+AC surge load W = highest value of:
+  AC peak load W - AC load running watts + AC load surge watts
+
+recommended inverter W = max(
+  AC peak load W x inverter headroom factor,
+  AC surge load W
+)
 ```
 
 The result is rounded up to the next 100 W.
 
-The Fully DC option does not require an inverter.
+Generation filters single inverters by nominal input voltage and continuous wattage, then compares inverter plus separate-controller cost against integrated-MPPT combinations. It never invents wattage beyond the catalogue. The old inverterWattStep field remains readable for compatibility but is no longer a sizing limit or visible setting. Edited multi-inverter plans retain aggregate watts but show Needs attention; integrated MPPT is only credited for one matched unit. Continuous W, VA/power factor, surge duration and temperature must still be checked. Efficiency remains an operating allowance; idle consumption is not separately inferred.
+
+The Fully DC option does not require an inverter. A Hybrid project with no AC loads also has a zero inverter requirement.
 
 ## Generated Equipment
 
-Equipment generation lives in `src/engine/equipment.ts`.
+Generated values use calculated requirements, voltage-compatible product IDs, and editable unit-size preferences:
 
-Generated values use calculated requirements and editable defaults:
+- panel candidates at or below the configured largest unit are compared by installed cost; a lower component count wins when its equipment cost is within 30% of the cheapest candidate
+- battery candidates must form native-voltage banks or explicitly approved series strings, within documented parallel limits; unknown limits permit only a single native-voltage unit. Known continuous discharge limits also affect quantity. The saved V x Ah preference is used when feasible; a larger compatible class is allowed when necessary
+- controllers must support the project voltage; quantity covers both current and documented PV input power. Preferred controller amps are used when compatible; 48 V can use the documented 60 A class even if an older preference is smaller
+- one compatible Hybrid inverter is selected by combined inverter/controller cost; included MPPT contributes once, and separate controllers cover the remaining current and PV power. A missing product remains unresolved, with zero generated quantity and an incomplete-estimate warning
+- monitoring is not automatically added to a single light-load group; it remains editable and is included for multi-load or larger generated plans
 
-- panel quantity is rounded up from required solar array W and default panel watts
-- battery quantity is rounded up from required battery Wh and default battery voltage/Ah
-- MPPT amps are rounded up using the configured MPPT amp step
-- Hybrid inverter count and watts are rounded up using the configured inverter watt step
+For bank topology, 12.8/25.6/51.2 V LiFePO4 maps to 12/24/48 V. The project selector offers those three nominal classes; older custom voltages remain readable with a review warning. Arithmetic series ratios alone do not approve wiring. Unknown BMS limits, incompatible edited ratings and missing product identities require attention. Empty projects generate no equipment quantities.
 
-Solar and battery equipment are shared across Fully DC and Hybrid options. The generator uses the larger requirement between the two options so the shared equipment can support either path.
+Equipment plans persist product IDs for panels, batteries, DC/Hybrid controllers and inverters. Specifications resolve from the authoritative JSON catalogue, never from imported user-supplied metadata. Edited capacities invalidate their selected identity. Product selectors apply the named reference's capacity and base price; manual price edits and saved equipment remain intact during recalculation. DC and Hybrid controllers have independent references, quantities and prices. The optional hybridControllerUnitUsd defaults to the legacy controller price when absent. Selecting a compatible single inverter recalculates its supplementary controller quantity; subsequent manual quantity edits remain possible. Battery/inverter source notes identify comparable pricing and revision uncertainty. Catalogue records include optional supported voltages, current/connection/PV limits, inverter type, MPPT capacity and price evidence. Legacy missing fields remain unverified rather than being silently inferred.
+
+Solar and battery equipment are shared across Fully DC and Hybrid options. The generator uses the larger requirement between the two options so the shared equipment can support either path. Catalogue choice is a transparent budgeting heuristic, not a supplier recommendation or component compatibility approval.
 
 ## Editable Equipment And Pricing
 
@@ -245,6 +264,8 @@ The side panel keeps equipment quantities, capacities, and prices together in ac
 
 Currency is folded by default. Solar Panels is open by default. Prices are entered as USD base unit prices, and totals are displayed in the selected project currency using the manual exchange rate.
 
+Starter prices use dated Kenya/Uganda retail observations and explicit allowances, not a statistically representative market average. An untouched generated plan uses the catalogue price matching its selected product class and a compact or hub-scale balance-of-system allowance. Any price edit freezes the current equipment and all displayed prices; Use generated values resets quantities/capacities while retaining those edited prices. Existing projects with local prices remain local. The source checks and limits are documented in `docs/PRICING.md`.
+
 ## Adequacy Checks
 
 Adequacy checks compare the current equipment plan against the calculated requirements.
@@ -253,10 +274,10 @@ The app checks:
 
 - current solar array W vs recommended solar array W
 - current battery Wh vs required LiFePO4 battery Wh
-- current MPPT/controller amps vs recommended MPPT current
+- total current capacity across the selected MPPT/controllers vs recommended MPPT current
 - current Hybrid inverter W vs recommended inverter size
 
-If all required values are met, the option shows **Pass**.
+If all required values are met, the option shows **Preliminary checks met**. This is a capacity comparison, not certification of component compatibility, protection, cable sizing, or installation design.
 
 If one or more values are below recommendation, the option shows **Needs attention** and lists specific warnings, for example:
 
@@ -267,9 +288,9 @@ Battery storage is 2.56 kWh; recommendation is 3.20 kWh.
 
 Users can still print or export reports when a plan needs attention. The report and CSV preserve the edited equipment and warnings.
 
-## Costing
+Needs attention also covers an empty demand list, an incompatible battery bank, more than four parallel battery strings, AC loads still listed in a Fully DC plan, assumed parallel inverters, and clearly mismatched starter panel/inverter prices. Contextual planning notes identify DC conversion, BMS ratings, surge assumptions and pricing limits; these are carried into PDF and CSV. This extends the existing adequacy explanation, without adding a component-design workflow.
 
-Costing lives in `src/engine/costing.ts`.
+## Costing
 
 The app uses editable USD unit prices and the manual exchange rate on the project:
 
@@ -295,6 +316,10 @@ Balance-of-system categories use quantity times USD unit price:
 - monitoring
 
 Installation and contingency are calculated from editable assumption rates.
+
+Installation = equipment subtotal x installation rate. Contingency = (equipment subtotal + installation) x contingency rate. USD line totals and these two allowances are rounded to cents; each converted line is rounded to two decimals and the displayed total sums those displayed lines. USD projects always use exchange rate 1. Totals are preliminary allowances and do not claim tax, delivery, or mounting is included. A generated hybrid inverter with integrated MPPT is costed once; a separate controller is added only when the documented integrated capacity does not cover the requirement.
+
+Sun hours represent equivalent full-sun hours, preferably for the low-sun design season, not sunrise-to-sunset duration. The derate factor is a combined allowance for generation, environmental and charging losses. Autonomy increases battery capacity but does not increase the daily solar-energy formula; the reserve does not guarantee a recharge interval after prolonged cloudy weather. The planner has no hourly dispatch/weather simulation. Sizing assumptions currently remain shared across projects within a browser; project-specific snapshots are deferred.
 
 ## Reports
 
@@ -347,17 +372,6 @@ Editable defaults live in `src/data`:
 - `assumptions.json` - efficiencies, derates, reserve factors, installation, contingency, and disclaimer text
 - `brand-profiles.json` - report/UI branding profiles
 - `sample-project.json` - Hello Hub Lite sample project
-
-## Main Modules
-
-- `src/main.ts` - app state, rendering, event handling, report and CSV export
-- `src/engine/calculations.ts` - load and sizing calculations
-- `src/engine/equipment.ts` - generated equipment and adequacy checks
-- `src/engine/costing.ts` - cost estimates
-- `src/engine/recommendations.ts` - system recommendation text
-- `src/templates/report.eta` - printable report template
-- `src/types/project.ts` - shared TypeScript types
-- `src/styles.css` - layout, responsive styles, and print styles
 
 ## Assumptions And Limitations
 

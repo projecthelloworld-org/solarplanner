@@ -7,7 +7,7 @@ Thank you for helping improve Hello Solar Planner. Contributions from community 
 - Read [README.md](README.md) for the project overview.
 - Read [SPEC.md](SPEC.md) before changing calculations or report behavior.
 - Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for module ownership and data flow.
-- Search existing GitLab issues before opening a duplicate.
+- Search existing issues before opening a duplicate.
 
 ## Development Setup
 
@@ -36,7 +36,7 @@ npm run check
 - Keep commits focused and use clear imperative messages.
 - Do not mix unrelated formatting or generated-file changes into a feature commit.
 
-The `phw` branch is reserved for Project Hello World's hosted tools landing page and deployment-specific changes. Reusable planner improvements should be made on the stable open-source branch first, then merged into `phw`.
+Open pull or merge requests against the stable open-source branch. Keep organization-specific deployment changes outside reusable planner contributions.
 
 ## Coding Guidelines
 

@@ -78,6 +78,33 @@ export interface ProductItem {
   wattHours?: number;
   amps?: number;
   systemVoltage?: number;
+  voltage?: number;
+  ampHours?: number;
+  maxArrayWatts?: number;
+  supportedVoltages?: number[];
+  maxSeries?: number;
+  maxParallel?: number;
+  continuousDischargeA?: number;
+  inverterType?: "standalone" | "integrated";
+  integratedMpptA?: number;
+  maxPvWatts?: number;
+  pvWattsByVoltage?: Record<string, number>;
+  maxPvVoltage?: number;
+  surgeVA?: number;
+  specificationSources?: string[];
+  priceEvidence?: PriceEvidence[];
+  priceNotes?: string;
+}
+
+export interface PriceEvidence {
+  url: string;
+  checkedOn: string;
+  country: string;
+  currency: string;
+  amount: number;
+  unitsPerUsd: number;
+  basis: "listed-product" | "comparable-class";
+  taxDelivery: string;
 }
 
 export interface EquipmentDefaults {
@@ -92,6 +119,7 @@ export interface PricingSettings {
   panelUnitUsd: number;
   batteryUnitUsd: number;
   controllerUnitUsd: number;
+  hybridControllerUnitUsd?: number;
   inverterUnitUsd: number;
   dcDistributionUnitUsd: number;
   acDistributionUnitUsd: number;
@@ -101,6 +129,8 @@ export interface PricingSettings {
 }
 
 export interface SharedEquipmentPlan {
+  panelProductId?: string;
+  batteryProductId?: string;
   panelCount: number;
   panelWatts: number;
   batteryCount: number;
@@ -109,11 +139,14 @@ export interface SharedEquipmentPlan {
 }
 
 export interface DcEquipmentPlan {
+  controllerProductId?: string;
   controllerCount: number;
   mpptAmps: number;
 }
 
 export interface HybridEquipmentPlan {
+  controllerProductId?: string;
+  inverterProductId?: string;
   controllerCount: number;
   mpptAmps: number;
   inverterCount: number;
@@ -154,9 +187,10 @@ export interface AdequacyCheck {
 
 export interface EquipmentEvaluation {
   systemId: SystemOptionId;
-  status: "Pass" | "Needs attention";
+  status: "Preliminary checks met" | "Needs attention";
   checks: AdequacyCheck[];
   warnings: string[];
+  notes: string[];
 }
 
 export interface LoadCalculation {
@@ -179,6 +213,8 @@ export interface CalculationResult {
   totalDailyWh: number;
   peakLoadW: number;
   surgeLoadW: number;
+  acPeakLoadW: number;
+  acSurgeLoadW: number;
   criticalDailyWh: number;
   dc: SystemSizing;
   hybrid: SystemSizing;

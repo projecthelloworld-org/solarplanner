@@ -1,98 +1,239 @@
 {
   "solarPanels": [
     {
+      "id": "pv-100",
+      "name": "100 W mono solar panel",
+      "unit": "panel",
+      "unitCost": 45,
+      "watts": 100
+    },
+    {
       "id": "pv-200",
       "name": "200 W mono solar panel",
       "unit": "panel",
-      "unitCost": 130,
+      "unitCost": 65,
       "watts": 200
     },
     {
       "id": "pv-450",
       "name": "450 W mono solar panel",
       "unit": "panel",
-      "unitCost": 245,
+      "unitCost": 110,
       "watts": 450
     }
   ],
   "batteries": [
     {
+      "id": "bat-512",
+      "systemVoltage": 12,
+      "priceNotes": "Existing Uganda 40 Ah class allowance; series, parallel and BMS limits unverified. Single native-voltage use only; obtain matching specifications.",
+      "priceEvidence": [{"url":"https://www.jumia.ug/other-40ah-12.8v-lifepo4-solar-battery-512wh-with-usb-dc-output-260181220.html","checkedOn":"2026-09-07","country":"Uganda","currency":"UGX","amount":368900,"unitsPerUsd":3800,"basis":"listed-product","taxDelivery":"Tax and delivery unconfirmed; retained September reference"}],
+      "name": "12.8 V 40 Ah LiFePO4 battery",
+      "unit": "battery",
+      "unitCost": 100,
+      "wattHours": 512,
+      "voltage": 12.8,
+      "ampHours": 40
+    },
+    {
       "id": "bat-1280",
+      "systemVoltage": 12,
+      "priceNotes": "Existing 12.8 V class allowance; manufacturer series/parallel approval and BMS limits unknown.",
+      "priceEvidence": [{"url":"https://reenpowerandsolarenterprises.co.ke/product/lithium-valley-lfp100-12-1-28kwh-battery/","checkedOn":"2026-09-07","country":"Kenya","currency":"KES","amount":26900,"unitsPerUsd":129.46,"basis":"comparable-class","taxDelivery":"Tax and delivery unconfirmed; retained September reference"}],
       "name": "12.8 V 100 Ah LiFePO4 battery",
       "unit": "battery",
-      "unitCost": 310,
-      "wattHours": 1280
+      "unitCost": 220,
+      "wattHours": 1280,
+      "voltage": 12.8,
+      "ampHours": 100
     },
     {
       "id": "bat-2560",
-      "name": "25.6 V 100 Ah LiFePO4 battery",
+      "name": "Felicity FLA24100 25.6 V 100 Ah LiFePO4 battery",
+      "systemVoltage": 24,
+      "maxParallel": 15,
+      "specificationSources": ["https://us.felicitysolar.com/product/fla24100/"],
+      "priceEvidence": [{"url":"https://sunstoreltd.com/product.php?id=191","checkedOn":"2026-09-07","country":"Kenya","currency":"KES","amount":61200.8,"unitsPerUsd":129.46,"basis":"listed-product","taxDelivery":"Tax and delivery unconfirmed; retained September reference"}],
       "unit": "battery",
-      "unitCost": 560,
-      "wattHours": 2560
+      "unitCost": 500,
+      "wattHours": 2560,
+      "voltage": 25.6,
+      "ampHours": 100
+    },
+    {
+      "id": "bat-24-50",
+      "name": "SNADI 25.6 V 50 Ah LiFePO4 reference",
+      "unit": "battery", "unitCost": 180, "systemVoltage": 24,
+      "voltage": 25.6, "ampHours": 50, "wattHours": 1280,
+      "continuousDischargeA": 50,
+      "specificationSources": ["https://www.snadisolar.com/product/snadi-128256v-lifepo4-battery.html"],
+      "priceEvidence": [{"url":"https://jiji.co.ke/umoja/power-equipments/lithium-batery-24v-50ah-CyqK4MfIx43eANgW2JQ1FKAd.html","checkedOn":"2026-09-07","country":"Kenya","currency":"KES","amount":22000,"unitsPerUsd":129.46,"basis":"comparable-class","taxDelivery":"Tax, delivery and brand match unconfirmed"}],
+      "priceNotes": "Single comparable-class price, not a SNADI quotation. Native 24 V use only; series/parallel approval unknown."
+    },
+    {
+      "id": "bat-48-100",
+      "name": "Felicity FLA48100 51.2 V 100 Ah LiFePO4 battery",
+      "unit": "battery", "unitCost": 950, "systemVoltage": 48,
+      "voltage": 51.2, "ampHours": 100, "wattHours": 5120,
+      "maxParallel": 15,
+      "specificationSources": ["https://www.felicitysolar.com/zh/product/fla48100/"],
+      "priceEvidence": [{"url":"https://jiji.ug/central-division/power-equipments/100ah-48v-5kwh-felicity-lithium-battery-ptGCxsTN76fbppdY5eKSL9Pr.html","checkedOn":"2026-09-07","country":"Uganda","currency":"UGX","amount":3500000,"unitsPerUsd":3800,"basis":"listed-product","taxDelivery":"Tax and delivery unconfirmed"}],
+      "priceNotes": "Single Uganda listing. Listing and manufacturer revisions disagree on current limits; BMS current remains unknown pending matching revision."
     }
   ],
   "chargeControllers": [
     {
-      "id": "mppt-30",
-      "name": "30 A MPPT charge controller",
+      "id": "mppt-20",
+      "name": "SRNE ML2420 20 A MPPT charge controller",
+      "supportedVoltages": [12,24], "maxPvVoltage": 90,
+      "pvWattsByVoltage": {"12":260,"24":520},
+      "specificationSources": ["https://www.srnesolar.com/wp-content/uploads/2020/11/MPPT-Solar-Charge-Controller-ML2420-Specification.pdf"],
+      "priceEvidence": [{"url":"https://kwttechmart.ug/products/solarland-20a-mppt-solar-charge-controller-reliable-charge","checkedOn":"2026-09-07","country":"Uganda","currency":"UGX","amount":200000,"unitsPerUsd":3800,"basis":"comparable-class","taxDelivery":"Tax and delivery unconfirmed; different brand"}],
+      "priceNotes": "20 A class price; obtain a matching SRNE quotation. 90 V PV limit is the documented cold-temperature limit.",
       "unit": "controller",
-      "unitCost": 145,
+      "unitCost": 50,
+      "amps": 20
+    },
+    {
+      "id": "mppt-30",
+      "name": "SRNE ML2430 30 A MPPT charge controller",
+      "supportedVoltages": [12,24], "maxPvVoltage": 90,
+      "pvWattsByVoltage": {"12":400,"24":800},
+      "specificationSources": ["https://www.srnesolar.com/wp-content/uploads/2020/11/MPPT-Solar-Charge-Controller-ML2420-Specification.pdf"],
+      "priceNotes": "Retained Uganda SRNE 30 A class allowance; exact model quote required.",
+      "priceEvidence": [{"url":"https://bookstack.nearlyfreeenergy.com/attachments/58?open=true","checkedOn":"2026-09-07","country":"Uganda","currency":"UGX","amount":258000,"unitsPerUsd":3800,"basis":"comparable-class","taxDelivery":"Published Shiner2430 trade tier above UGX 10 million; retail, tax and delivery unconfirmed"}],
+      "unit": "controller",
+      "unitCost": 75,
       "amps": 30
     },
     {
       "id": "mppt-60",
-      "name": "60 A MPPT charge controller",
+      "name": "SRNE ML4860 60 A MPPT charge controller",
+      "supportedVoltages": [12,24,48], "maxPvVoltage": 145,
+      "pvWattsByVoltage": {"12":800,"24":1600,"48":3200},
+      "specificationSources": ["https://www.srnesolar.com/wp-content/uploads/2020/11/MPPT-Solar-Charge-Controller-ML4860-Specification.pdf"],
+      "priceEvidence": [{"url":"https://www.bbiri-centre.com/product-page/60a-mppt-solar-charge-controller-12v-24v-48v-auto-adapt","checkedOn":"2026-09-07","country":"Uganda","currency":"UGX","amount":560000,"unitsPerUsd":3800,"basis":"comparable-class","taxDelivery":"Tax and delivery unconfirmed; retained September reference"}],
+      "priceNotes": "60 A class allowance; confirm exact SRNE revision and quote.",
       "unit": "controller",
-      "unitCost": 260,
+      "unitCost": 150,
       "amps": 60
     }
   ],
   "hybridInverters": [
     {
-      "id": "hybrid-1000",
-      "name": "1 kW hybrid inverter charger",
+      "id": "inverter-300",
+      "name": "MEBA P300U 12 V 300 W standalone inverter",
+      "systemVoltage": 12, "inverterType": "standalone",
+      "specificationSources": ["https://mebamcb.com/product/power-inverter/meba-300w-pure-sine-wave-power-inverter-p300u"],
+      "priceNotes": "Retained USD 50 small-inverter class allowance; matching brand price and surge duration unverified.",
+      "priceEvidence": [{"url":"https://www.senetic.co.ke/product/INV14","checkedOn":"2026-09-07","country":"Kenya","currency":"KES","amount":5367.74,"unitsPerUsd":129.46,"basis":"comparable-class","taxDelivery":"24 V comparator only; gross price, delivery unknown, out of stock; 12 V quote required"}],
       "unit": "inverter",
-      "unitCost": 420,
+      "unitCost": 50,
+      "watts": 300
+    },
+    {
+      "id": "hybrid-1000",
+      "name": "MUST PV18-1012 VPM 12 V 1 kW integrated inverter",
+      "systemVoltage": 12, "inverterType": "integrated", "integratedMpptA": 60,
+      "maxPvWatts": 625, "maxPvVoltage": 75, "surgeVA": 2000,
+      "specificationSources": ["https://pas-solar.com/wp-content/uploads/2023/05/MUST-PV18-1012-VPM.pdf"],
+      "priceEvidence": [{"url":"https://kreatives.co.ke/product/premier-1000watts-40mppt-hybrid-inverter-1kw-hybrid-inverter","checkedOn":"2026-09-07","country":"Kenya","currency":"KES","amount":23500,"unitsPerUsd":129.46,"basis":"comparable-class","taxDelivery":"Tax and delivery unconfirmed; 40 A class, not matching 60 A model"},{"url":"https://www.logike.co.ke/product/MUST-1KW-1000Watts-12V-MPPT-Solar-Hybrid-Inverter/95136678","checkedOn":"2026-09-07","country":"Kenya","currency":"KES","amount":27500,"unitsPerUsd":129.46,"basis":"comparable-class","taxDelivery":"Tax and delivery unconfirmed; confirm revision"}],
+      "unit": "inverter",
+      "unitCost": 220,
       "watts": 1000
     },
     {
       "id": "hybrid-2000",
-      "name": "2 kW hybrid inverter charger",
+      "name": "MUST PV18-2024 VPM 24 V 2 kW integrated inverter",
+      "systemVoltage": 24, "inverterType": "integrated", "integratedMpptA": 60,
+      "maxPvWatts": 1500, "maxPvVoltage": 145, "surgeVA": 4000,
+      "specificationSources": ["https://pas-solar.com/wp-content/uploads/2023/05/MUST-PV18-1012-VPM.pdf"],
+      "priceEvidence": [{"url":"https://solarstore.co.ke/must-solar/","checkedOn":"2026-09-07","country":"Kenya","currency":"KES","amount":40000,"unitsPerUsd":129.46,"basis":"listed-product","taxDelivery":"Delivery in Nairobi CBD advertised; tax unconfirmed"}],
       "unit": "inverter",
-      "unitCost": 690,
+      "unitCost": 310,
       "watts": 2000
+    },
+    {
+      "id":"inverter-24-300", "name":"Green Cell INV14 24 V 300 W standalone inverter",
+      "unit":"inverter", "unitCost":45, "watts":300, "systemVoltage":24, "inverterType":"standalone", "surgeVA":600,
+      "specificationSources":["https://greencell.global/pl/przetwornice/2428-przetwornica-napiecia-inwerter-green-cell-24v-na-230v-300w600w-czysta-sinusoida.html"],
+      "priceEvidence":[{"url":"https://www.senetic.co.ke/product/INV14","checkedOn":"2026-09-07","country":"Kenya","currency":"KES","amount":5367.74,"unitsPerUsd":129.46,"basis":"listed-product","taxDelivery":"Gross price; delivery unknown; listed out of stock"}],
+      "priceNotes":"Single listing; availability unconfirmed. Surge duration unknown."
+    },
+    {
+      "id":"inverter-48-200", "name":"Victron Phoenix 48/250 VE.Direct standalone inverter",
+      "unit":"inverter", "unitCost":130, "watts":200, "systemVoltage":48, "inverterType":"standalone",
+      "specificationSources":["https://www.victronenergy.com/inverters/phoenix-inverter-vedirect-250va-800va"],
+      "priceEvidence":[{"url":"https://voltwise.ke/catalog","checkedOn":"2026-09-07","country":"Kenya","currency":"KES","amount":16216,"unitsPerUsd":129.46,"basis":"listed-product","taxDelivery":"Tax and delivery unconfirmed"}],
+      "priceNotes":"250 VA is not 250 W; 200 W continuous reference. Temperature derating requires review."
+    },
+    {
+      "id":"hybrid-48-5000", "name":"MUST PV18-5048 VHM 48 V 5 kW integrated inverter",
+      "unit":"inverter", "unitCost":570, "watts":5000, "systemVoltage":48, "inverterType":"integrated", "integratedMpptA":80,
+      "maxPvWatts":3840, "maxPvVoltage":145,
+      "specificationSources":["https://www.mustpower.cn/wp-content/uploads/2018/03/PV18002-5KW.pdf"],
+      "priceEvidence":[{"url":"https://i-solar.co.ke/product/must-5kw-5000watts-48v-80a-pv1800-vhm-hybrid-solar-mppt-inverter/","checkedOn":"2026-09-07","country":"Kenya","currency":"KES","amount":68000,"unitsPerUsd":129.46,"basis":"listed-product","taxDelivery":"Tax and delivery unconfirmed"},{"url":"https://solarstore.co.ke/product-brand/must/","checkedOn":"2026-09-07","country":"Kenya","currency":"KES","amount":74000,"unitsPerUsd":129.46,"basis":"listed-product","taxDelivery":"Nairobi CBD delivery advertised; tax unconfirmed"}],
+      "priceNotes":"USD 525-572 observed before unknown tax/delivery. Rounded upper allowance; verify VHM revision."
     }
   ],
   "dcDistribution": [
     {
+      "id": "dc-board-small",
+      "name": "Compact DC protection allowance",
+      "unit": "set",
+      "unitCost": 40,
+      "maxArrayWatts": 300
+    },
+    {
       "id": "dc-board",
       "name": "DC breaker board, fuses, labels, and surge protection",
       "unit": "set",
-      "unitCost": 180
+      "unitCost": 100
     }
   ],
   "acDistribution": [
     {
+      "id": "ac-board-small",
+      "name": "Compact AC protection allowance",
+      "unit": "set",
+      "unitCost": 50,
+      "maxArrayWatts": 300
+    },
+    {
       "id": "ac-board",
       "name": "AC breaker board, RCD, outlets, and labels",
       "unit": "set",
-      "unitCost": 220
+      "unitCost": 90
     }
   ],
   "cabling": [
     {
+      "id": "cable-kit-small",
+      "name": "Compact PV, battery, and load cabling allowance",
+      "unit": "kit",
+      "unitCost": 50,
+      "maxArrayWatts": 300
+    },
+    {
       "id": "cable-kit",
       "name": "PV, battery, and load cabling with MC4/connectors",
       "unit": "kit",
-      "unitCost": 210
+      "unitCost": 140
     }
   ],
   "earthing": [
     {
+      "id": "earth-kit-small",
+      "name": "Compact earthing and surge allowance",
+      "unit": "kit",
+      "unitCost": 70,
+      "maxArrayWatts": 300
+    },
+    {
       "id": "earth-kit",
       "name": "Earthing rod, bonding, surge, and lightning protection kit",
       "unit": "kit",
-      "unitCost": 190
+      "unitCost": 140
     }
   ],
   "monitoring": [
@@ -100,7 +241,7 @@
       "id": "monitor-kit",
       "name": "Battery monitor and remote energy logging",
       "unit": "kit",
-      "unitCost": 155
+      "unitCost": 150
     }
   ]
 }
