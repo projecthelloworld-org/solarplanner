@@ -12,6 +12,13 @@ export interface LoadItem {
   voltage: number;
   surgeMultiplier: number;
   critical: boolean;
+  powerFactor?: number;
+  startupVA?: number;
+  startupSeconds?: number;
+  frequencyHz?: number;
+  voltageMin?: number;
+  voltageMax?: number;
+  startupGroup?: string;
 }
 
 export interface Project {
@@ -31,6 +38,72 @@ export interface Project {
   equipmentPlan?: EquipmentPlan;
   loads: LoadItem[];
   updatedAt: string;
+  startupMode?: "groups" | "all";
+  inverterSettings?: { mode: "manufacturer" | "manual"; efficiency?: number; unloadedHoursPerDay?: number };
+  optionPlans?: Partial<Record<SystemOptionId, OptionPlanState>>;
+}
+
+export interface OptionPlanState {
+  mode: EquipmentPlanMode;
+  equipment?: EquipmentPlan;
+  pricingOverrides: Partial<PricingSettings>;
+  engineering?: EngineeringSettings;
+}
+
+/** Temperature coefficients are percent per degree C, relative to STC (25 C). */
+export interface ElectricalRatings {
+  outputVoltage?: number;
+  outputFrequencyHz?: number;
+  efficiency?: number;
+  noLoadWatts?: number;
+  continuousVA?: number;
+  surgeW?: number;
+  surgeVA?: number;
+  surgeSeconds?: number;
+  minimumVoltage?: number;
+  continuousDischargeA?: number;
+  continuousDischargeW?: number;
+  startupDischargeA?: number;
+  startupDischargeW?: number;
+  startupDischargeSeconds?: number;
+  maxChargeA?: number;
+  maxChargeW?: number;
+  chargeVoltage?: number;
+  floatVoltage?: number;
+  maxSeries?: number;
+  maxParallel?: number;
+  voc?: number;
+  vmp?: number;
+  isc?: number;
+  vocTemperatureCoefficient?: number;
+  vmpTemperatureCoefficient?: number;
+  iscTemperatureCoefficient?: number;
+  maxPvVoltage?: number;
+  minMpptVoltage?: number;
+  maxMpptVoltage?: number;
+  mpptBatteryHeadroomV?: number;
+  maxPvInputA?: number;
+  mpptInputs?: number;
+  maxPvWatts?: number;
+}
+
+export interface PvAssignment {
+  target: "separate" | "integrated";
+  controllerIndex: number;
+  input: number;
+  series: number;
+  parallel: number;
+}
+
+export interface EngineeringSettings {
+  battery?: ElectricalRatings;
+  inverter?: ElectricalRatings;
+  controller?: ElectricalRatings;
+  panel?: ElectricalRatings;
+  minimumCellTemperatureC?: number;
+  maximumCellTemperatureC?: number;
+  pvIscFactor?: number;
+  pvAssignments?: PvAssignment[];
 }
 
 export interface BrandProfile {
@@ -69,7 +142,7 @@ export interface ProductCatalog {
   monitoring: ProductItem[];
 }
 
-export interface ProductItem {
+export interface ProductItem extends ElectricalRatings {
   id: string;
   name: string;
   unit: string;
@@ -94,6 +167,9 @@ export interface ProductItem {
   specificationSources?: string[];
   priceEvidence?: PriceEvidence[];
   priceNotes?: string;
+  specificationRevision?: string;
+  specificationCheckedOn?: string;
+  specificationBasis?: string;
 }
 
 export interface PriceEvidence {
@@ -183,6 +259,8 @@ export interface AdequacyCheck {
   unit: string;
   passed: boolean;
   warning?: string;
+  status?: "passed" | "failed" | "unverified";
+  detail?: string;
 }
 
 export interface EquipmentEvaluation {
@@ -191,6 +269,7 @@ export interface EquipmentEvaluation {
   checks: AdequacyCheck[];
   warnings: string[];
   notes: string[];
+  unverified?: string[];
 }
 
 export interface LoadCalculation {
@@ -218,6 +297,15 @@ export interface CalculationResult {
   criticalDailyWh: number;
   dc: SystemSizing;
   hybrid: SystemSizing;
+  inverterDemand?: { continuousW: number; continuousVA?: number; events: StartupEvent[] };
+  effectiveEfficiency?: { value: number; source: "manual" | "manufacturer" | "fallback"; productId?: string };
+  idleDailyWh?: number;
+}
+
+export interface StartupEvent {
+  watts: number;
+  voltAmps?: number;
+  durationSeconds?: number;
 }
 
 export interface RecommendationLine {

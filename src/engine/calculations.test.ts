@@ -70,9 +70,9 @@ describe("solar sizing calculations", () => {
     expect(result.totalDailyWh).toBe(1160);
     expect(result.dc.adjustedDailyWh).toBe(1160);
     expect(result.hybrid.adjustedDailyWh).toBe(1210);
-    expect(result.hybrid.requiredBatteryWh).toBe(3700); // 1210 * 2 * 1.2 / .8 = 3630, rounded up.
-    expect(result.hybrid.recommendedSolarArrayW).toBe(490); // 1210 / 4 / .75 * 1.2 = 484.
-    expect(result.hybrid.recommendedMpptCurrentA).toBe(30); // 490 / 24 * 1.25.
+    expect(result.hybrid.requiredBatteryWh).toBe(3630); // No procurement rounding before selection.
+    expect(result.hybrid.recommendedSolarArrayW).toBeCloseTo(484); // 1210 / 4 / .75 * 1.2.
+    expect(result.hybrid.recommendedMpptCurrentA).toBeCloseTo(484 / 24 * 1.25);
   });
 
   it("excludes inactive rows from both energy and peak/surge demand", () => {
@@ -86,8 +86,8 @@ describe("solar sizing calculations", () => {
   it("keeps fractional watt-hour demand in sizing and treats critical as a label", () => {
     const site = projectWith([load({ watts: 0.25, hoursPerDay: 0.5, critical: true })]);
     const result = calculateProject(site, assumptions);
-    expect(result.dc.recommendedSolarArrayW).toBe(10);
-    expect(result.dc.requiredBatteryWh).toBe(100);
+    expect(result.dc.recommendedSolarArrayW).toBeCloseTo(0.125 / assumptions.dcDistributionEfficiency / site.sunHours / assumptions.arrayDerateFactor * assumptions.batteryReserveFactor);
+    expect(result.dc.requiredBatteryWh).toBeCloseTo(0.125 / assumptions.dcDistributionEfficiency * site.autonomyDays * assumptions.batteryReserveFactor / assumptions.batteryDepthOfDischarge);
     expect(result.loadRows[0].dailyWh).toBe(0.125);
     expect(calculateProject(projectWith([{ ...site.loads[0], critical: false }]), assumptions).dc).toEqual(result.dc);
   });

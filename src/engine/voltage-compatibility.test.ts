@@ -24,10 +24,10 @@ describe("voltage-compatible planning", () => {
         if (battery) {
           expect(battery.systemVoltage).toBe(voltage);
           expect(bundle.actuals.batteryWh).toBeCloseTo(bundle.plan.shared.batteryCount * battery.voltage! * battery.ampHours!);
-          expect(bundle.actuals.batteryWh).toBeGreaterThanOrEqual(bundle.result.hybrid.requiredBatteryWh);
+          expect(bundle.actuals.batteryWh).toBeGreaterThanOrEqual(bundle.result[project.selectedSystem].requiredBatteryWh);
         } else {
           expect(bundle.evaluations.dc.status).toBe("Needs attention");
-          expect(bundle.evaluations.dc.warnings.join(" ")).toContain("no compatible battery");
+          expect(bundle.evaluations.dc.unverified?.join(" ")).toContain("no compatible battery");
         }
         expect(catalog.chargeControllers.find((item) => item.id === bundle.plan.dc.controllerProductId)?.supportedVoltages).toContain(voltage);
         if (bundle.plan.hybrid.inverterCount) expect(matchedInverter(bundle.plan)?.systemVoltage).toBe(voltage);
@@ -51,12 +51,12 @@ describe("voltage-compatible planning", () => {
   it("selects an integrated inverter when cheaper and does not duplicate its controller price", () => {
     const project = site(24);
     project.selectedSystem = "hybrid";
-    project.loads = [{ ...project.loads[0], currentType: "AC", watts: 600, hoursPerDay: 2 }];
+    project.loads = [{ ...project.loads[0], currentType: "AC", voltage: 230, watts: 600, hoursPerDay: 2 }];
     const bundle = getProjectBundle(project, assumptions);
     expect(bundle.plan.hybrid.inverterProductId).toBe("hybrid-2000");
     expect(includedMpptAmps(bundle.plan)).toBe(60);
     expect(bundle.plan.hybrid.controllerCount).toBe(0);
-    expect(bundle.plan.dc.controllerCount).toBeGreaterThan(0);
+    expect(bundle.options.dc.plan.dc.controllerCount).toBeGreaterThan(0);
     expect(bundle.costs[1].lines.find((line) => line.category === "Charge controller or hybrid inverter")?.totalUsd).toBe(0);
     expect(bundle.costs[1].lines.find((line) => line.category === "Hybrid inverter capacity")?.totalUsd).toBe(310);
     for (const exported of [buildProjectCsv(project, assumptions, brands), renderProjectReport(project, assumptions, brands)]) {
@@ -68,7 +68,8 @@ describe("voltage-compatible planning", () => {
 
   it("adds external controller capacity for array power above the integrated PV limit", () => {
     const project = site(24);
-    project.loads = [{ ...project.loads[0], currentType: "AC", watts: 600, hoursPerDay: 12 }];
+    project.selectedSystem = "hybrid";
+    project.loads = [{ ...project.loads[0], currentType: "AC", voltage: 230, watts: 600, hoursPerDay: 12 }];
     const bundle = getProjectBundle(project, assumptions);
     expect(bundle.actuals.solarArrayW).toBeGreaterThan(1500);
     expect(bundle.plan.hybrid.controllerCount).toBeGreaterThan(0);
@@ -77,6 +78,7 @@ describe("voltage-compatible planning", () => {
 
   it("preserves edited equipment and prices across voltage changes and serialization", () => {
     const project = site(24);
+    project.selectedSystem = "hybrid";
     project.equipmentPlan = getProjectBundle(project, assumptions).plan;
     project.equipmentPlanMode = "custom";
     project.pricing.inverterUnitUsd = 123.45;
@@ -86,8 +88,9 @@ describe("voltage-compatible planning", () => {
     expect(bundle.plan.hybrid.inverterProductId).toBe(project.equipmentPlan.hybrid.inverterProductId);
     expect(bundle.pricing.inverterUnitUsd).toBe(123.45);
     expect(bundle.evaluations.hybrid.status).toBe("Needs attention");
-    expect(bundle.evaluations.hybrid.warnings.join(" ")).toContain("compatible single inverter");
-    restored.equipmentPlanMode = "generated";
+    expect(bundle.evaluations.hybrid.unverified?.join(" ")).toContain("compatible single inverter");
+    restored.optionPlans!.hybrid!.mode = "generated";
+    restored.optionPlans!.hybrid!.equipment = undefined;
     expect(matchedInverter(getProjectBundle(restored, assumptions).plan)?.systemVoltage).toBe(48);
     expect(getProjectBundle(restored, assumptions).pricing.inverterUnitUsd).toBe(123.45);
   });
@@ -98,7 +101,7 @@ describe("voltage-compatible planning", () => {
     bundle.plan.hybrid.inverterWatts = 9999;
     expect(includedMpptAmps(bundle.plan)).toBe(0);
     bundle.plan.shared.batteryAh = 9999;
-    expect(evaluateEquipmentPlan(bundle.result, bundle.plan, "hybrid", project, assumptions).warnings.join(" ")).toContain("Battery specification is unverified");
+    expect(evaluateEquipmentPlan(bundle.result, bundle.plan, "hybrid", project, assumptions).unverified?.join(" ")).toContain("Battery specification is unverified");
   });
 
   it("keeps option-specific controller quotations independent", () => {
@@ -122,6 +125,7 @@ describe("voltage-compatible planning", () => {
 
   it("compares integrated and standalone combinations by complete cost", () => {
     const project = site();
+    project.selectedSystem = "hybrid";
     project.loads = [{ ...project.loads[0], currentType: "AC", hoursPerDay: 4 }];
     const custom = structuredClone(catalog);
     custom.hybridInverters = [
@@ -139,7 +143,7 @@ describe("voltage-compatible planning", () => {
     const result = calculateProject(project, assumptions);
     const plan = generateEquipmentPlan(result, project.equipmentDefaults, project, assumptions);
     plan.shared = { ...plan.shared, batteryProductId: "bat-24-50", batteryCount: 1, batteryVoltage: 25.6, batteryAh: 50 };
-    expect(evaluateEquipmentPlan(result, plan, "dc", project, assumptions).warnings.join(" ")).toContain("BMS continuous discharge current");
+    expect(evaluateEquipmentPlan(result, plan, "dc", project, assumptions).warnings.join(" ")).toContain("Battery continuous current");
   });
 
   it("keeps energy independent of voltage and responds to sunlight and load hours", () => {

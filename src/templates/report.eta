@@ -104,11 +104,11 @@
         </tr>
         <tr>
           <td>Recommended MPPT current (demand or installed array, whichever is larger)</td>
-          <td><%= it.selectedMpptRequirement %> A</td>
+          <td><%= it.formatNumber(it.selectedMpptRequirement) %> A</td>
         </tr>
         <tr>
           <td>Recommended inverter size</td>
-          <td><%= it.selectedSystem === "hybrid" ? `${it.formatNumber(it.selectedSizing.recommendedInverterW)} W` : "Not required" %></td>
+          <td><%= it.selectedSystem === "hybrid" ? `${it.formatNumber(it.effectiveInverterRequirementW)} W` : "Not required" %></td>
         </tr>
       </tbody>
     </table>
@@ -143,20 +143,20 @@
           <td>Fully DC MPPT/controller</td>
           <td><%= it.plan.dc.controllerCount %> controller(s) x <%= it.plan.dc.mpptAmps %> A</td>
           <td><%= it.actuals.dcMpptA %> A total</td>
-          <td>Requirement: <%= it.selectedMpptRequirement %> A</td>
+          <td>Requirement: <%= it.formatNumber(it.selectedMpptRequirement) %> A</td>
         </tr>
         <% } else { %>
         <tr>
           <td>Hybrid MPPT/controller</td>
           <td><%= it.plan.hybrid.controllerCount %> separate controller(s) x <%= it.plan.hybrid.mpptAmps %> A + <%= it.includedMpptA %> A integrated MPPT</td>
           <td><%= it.actuals.hybridMpptA %> A total</td>
-          <td>Requirement: <%= it.selectedMpptRequirement %> A</td>
+          <td>Requirement: <%= it.formatNumber(it.selectedMpptRequirement) %> A</td>
         </tr>
         <tr>
           <td>Hybrid inverter</td>
           <td><%= it.plan.hybrid.inverterCount %> inverter(s) x <%= it.plan.hybrid.inverterWatts %> W; <%= it.inverterDescription %></td>
           <td><%= it.formatNumber(it.actuals.hybridInverterW) %> W</td>
-          <td>Requirement: <%= it.formatNumber(it.selectedSizing.recommendedInverterW) %> W</td>
+          <td>Requirement: <%= it.formatNumber(it.effectiveInverterRequirementW) %> W</td>
         </tr>
         <% } %>
       </tbody>
@@ -168,7 +168,7 @@
       <p class="status-line <%= it.selectedEvaluation.status === "Preliminary checks met" ? "pass" : "warn" %>">
         <strong>Status:</strong> <%= it.selectedEvaluation.status %>
       </p>
-      <% if (it.selectedEvaluation.warnings.length === 0) { %>
+      <% if (it.selectedEvaluation.status === "Preliminary checks met") { %>
         <p class="report-note">The equipment meets the preliminary aggregate capacity checks. Voltage topology, conductor sizing, protection, earthing, temperature, structural loading, and manufacturer compatibility are not certified by this status.</p>
       <% } %>
       <% if (it.selectedEvaluation.warnings.length > 0) { %>
@@ -177,6 +177,9 @@
             <li><%= warning %></li>
           <% }) %>
         </ul>
+      <% } %>
+      <% if (it.selectedEvaluation.unverified?.length) { %>
+        <h3>Unverified checks</h3><ul class="report-note"><% it.selectedEvaluation.unverified.forEach((note) => { %><li><%= note %></li><% }) %></ul>
       <% } %>
       <p class="section-intro"><%= it.selectedRecommendation.summary %></p>
       <table class="report-table">
@@ -265,7 +268,7 @@
     <div class="assumption-list">
       <p><strong>DC distribution efficiency</strong><span><%= it.formatPercent(it.assumptions.dcDistributionEfficiency) %></span></p>
       <p><strong>Hybrid DC efficiency</strong><span><%= it.formatPercent(it.assumptions.hybridDcEfficiency) %></span></p>
-      <p><strong>Inverter efficiency</strong><span><%= it.formatPercent(it.assumptions.inverterEfficiency) %></span></p>
+      <p><strong>Fallback inverter efficiency</strong><span><%= it.formatPercent(it.assumptions.inverterEfficiency) %></span></p>
       <p><strong>Battery depth of discharge</strong><span><%= it.formatPercent(it.assumptions.batteryDepthOfDischarge) %></span></p>
       <p><strong>Battery reserve factor</strong><span><%= it.formatPercent(it.assumptions.batteryReserveFactor) %></span></p>
       <p><strong>PV derate factor</strong><span><%= it.formatPercent(it.assumptions.arrayDerateFactor) %></span></p>
@@ -278,6 +281,13 @@
     <p class="report-note"><%= it.assumptions.currencyExchangeNotes %></p>
   </section>
 
+  <% it.evidence.forEach((section) => { %>
+  <section class="report-section report-evidence">
+    <h2><%= section.title %></h2>
+    <table class="report-table report-checks"><thead><tr><% section.headings.forEach((heading) => { %><th><%= heading %></th><% }) %></tr></thead>
+    <tbody><% section.rows.forEach((row) => { %><tr><% row.forEach((cell) => { %><td><%= cell %></td><% }) %></tr><% }) %></tbody></table>
+  </section>
+  <% }) %>
   <section class="report-section disclaimer">
     <h2>Safety Disclaimer</h2>
     <p><%= it.assumptions.safetyDisclaimer %></p>

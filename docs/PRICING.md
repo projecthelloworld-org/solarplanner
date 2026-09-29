@@ -4,7 +4,7 @@ Baseline observations: August-September 2026. Last catalogue review: 2026-09-07.
 
 ## Current Voltage-Aware References
 
-The [equipment reference CSV](../EQUIPMENT_PRICING_REFERENCE.csv) is the public catalogue summary. It includes stable product IDs, nominal voltages, known limits, manufacturer-document links, price observations, and evidence notes. Contributors can regenerate it with `node scripts/export-equipment-reference.mjs` after changing catalogue records.
+The [equipment reference CSV](../EQUIPMENT_PRICING_REFERENCE.csv) is the public catalogue summary. It includes product references, nominal voltages, known limits, manufacturer-document links, price observations, and evidence notes.
 
 | Reference class | USD unit allowance | Evidence and limits |
 | --- | ---: | --- |
@@ -15,7 +15,7 @@ The [equipment reference CSV](../EQUIPMENT_PRICING_REFERENCE.csv) is the public 
 | MUST PV18-2024 VPM 24 V / 2 kW, integrated 60 A MPPT | 310 | Solar Store Kenya KES 40,000 (about USD 309). Confirm the exact VPM revision. |
 | MUST PV18-5048 VHM 48 V / 5 kW, integrated 80 A MPPT | 570 | Kenya observations KES 68,000 and 74,000, approximately USD 525-572. Reference uses documented 3,840 W PV input limit for the 80 A revision. |
 
-Source links and original observations are attached to the corresponding JSON records and CSV rows. New entries use the retained KES 129.46/USD comparison basis and rounded UGX 3,800/USD; these are explicit comparison assumptions, not a fresh foreign-exchange survey. Some older observations are carried forward from the September review. No two-country average is claimed where only one comparable observation is available. Tax/delivery uncertainty, out-of-stock status and brand mismatches are recorded. The SRNE Shiner2430 comparator is a published trade tier above UGX 10 million, not a confirmed single-unit retail price.
+Source links and original observations are attached to the equipment references. New entries use the retained KES 129.46/USD comparison basis and rounded UGX 3,800/USD; these are explicit comparison assumptions, not a fresh foreign-exchange survey. Some older observations are carried forward from the September review. No two-country average is claimed where only one comparable observation is available. Tax/delivery uncertainty, out-of-stock status and brand mismatches are recorded. The SRNE Shiner2430 comparator is a published trade tier above UGX 10 million, not a confirmed single-unit retail price.
 
 The 12.8 V small classes are available for native 12 V use. The planner does not wire batteries in series or parallel unless the catalogue records documented approval. A missing compatible product leaves an incomplete plan and a review warning. Under the default assumptions, a small 24 V router plan uses one native 25.6 V / 50 Ah battery. Any resulting total remains an allowance, not a verified installed quotation.
 
@@ -72,7 +72,7 @@ The USD 500 allowance for a 25.6 V / 100 Ah battery is supported by comparable K
 
 ## Evidence Summary
 
-The baseline uses multiple current retail observations where comparable products were available:
+The baseline uses multiple dated retail observations where comparable products were available:
 
 - The USD 110 allowance for a 450 W panel uses direct-retailer examples. It is a budgeting allowance, not a claim that every panel has comparable quality.
 - Kenya 200 W panels were commonly around KES 3,700-4,900. Uganda listings commonly ranged from UGX 333,000 to UGX 465,000. The country-balanced midpoint supports USD 65.
@@ -120,7 +120,7 @@ Checked on 2026-09-06. The following are listed asking prices, without independe
 | [Chloride Exide Uganda](https://www.chlorideexide.co.ug/category/solar) | 60 A Outback MPPT at UGX 1,650,000 excluding tax | About USD 435 before tax. Explicit evidence that brand, warranty and certification materially change price. |
 | [Kreatives, Kenya](https://kreatives.co.ke/product/premier-1000watts-40mppt-hybrid-inverter-1kw-hybrid-inverter) and [Logike, Kenya](https://www.logike.co.ke/product/MUST-1KW-1000Watts-12V-MPPT-Solar-Hybrid-Inverter/95136678) | 1 kW units at KES 23,500 and 27,500, both described as 12 V models | USD 220 remains a class-level allowance. These listings do not prove suitability for the sample's 24 V bus; obtain a matching voltage and continuous-rating quote. |
 
-The Fairprice source above describes a 24 V / 2.4 kWh battery. It must not be treated as proof of a 25.6 V / 2.56 kWh product. The 30 A controller uses a USD 75 allowance anchored by a Uganda SRNE 30 A listing at UGX 258,000. The named 24 V / 2 kW integrated inverter uses its current USD 310 reference. Balance-of-system, monitoring, and installation remain explicit allowances, not sourced kit quotations. Delivery, VAT, mounting hardware, and remote-site work are not reliably included in listed prices.
+The Fairprice source above describes a 24 V / 2.4 kWh battery. It must not be treated as proof of a 25.6 V / 2.56 kWh product. The 30 A controller uses a USD 75 allowance anchored by a Uganda SRNE 30 A listing at UGX 258,000. The named 24 V / 2 kW integrated inverter uses the dated USD 310 reference. Balance-of-system, monitoring, and installation remain explicit allowances, not sourced kit quotations. Delivery, VAT, mounting hardware, and remote-site work are not reliably included in listed prices.
 
 ### How The Planner Uses Reference Prices
 
@@ -132,15 +132,6 @@ The Fairprice source above describes a 24 V / 2.4 kWh battery. It must not be tr
 
 Unit prices are editable USD assumptions, even when the project displays KES or UGX. A quoted inverter may include MPPT; confirm that its documented current and PV limits match the planned array. Do not remove the capacity of a genuinely required supplementary controller merely to reduce cost.
 
-## Refresh Procedure
+## Reviewing Prices for Your Project
 
-Review the baseline at least every six months:
-
-1. Collect at least three comparable listings per country for major equipment where possible.
-2. Record specification, brand, warranty, listed price, tax status, source URL, and observation date.
-3. Exclude products with ambiguous ratings or mismatched specifications.
-4. Calculate a median for each country so one market does not dominate through listing volume.
-5. Convert both country medians using dated central-bank or similarly authoritative rates.
-6. Average the two country medians and round to a practical USD planning value.
-7. Review large changes with a solar practitioner before updating defaults.
-8. Update this document, the catalogue, sample project, tests, generated CSV, and changelog together.
+Replace the starter allowances with current quotations for matching equipment. Confirm tax, delivery, warranty, mounting and installation scope. Keep the quotation date and specification evidence with your project records.

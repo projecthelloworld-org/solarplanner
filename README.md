@@ -1,245 +1,63 @@
 # Hello Solar Planner
 
-Hello Solar Planner is an open-source, browser-based solar planning tool for Project Hello World, community networks, and practitioners designing power systems for connectivity hubs.
+Hello Solar Planner helps community teams and practitioners estimate solar power systems for connectivity hubs. Enter your appliances, compare power options, review equipment and costs, and share a planning report.
 
-It converts an editable electrical load table into two planning options:
+The planner compares two options:
 
-- **Fully DC** for systems that can power loads through DC distribution
-- **Hybrid DC + AC** for systems that need both direct DC supply and inverter-backed AC power
+- **Fully DC** supplies devices through DC distribution. Listed AC appliances would need suitable DC replacements.
+- **Hybrid DC + AC** supplies DC devices directly and AC appliances through an inverter.
 
-The planner estimates energy demand, battery storage, solar array capacity, charge-controller current, inverter capacity, equipment adequacy, and project costs. It also generates a printable report and a spreadsheet-friendly CSV export.
+Each option has its own equipment, prices and checks. Your appliance values remain the basis of the estimate.
 
-Current version: **v1.2.0**. See the [release notes](docs/RELEASE_NOTES_v1.2.0.md), [calculation method](docs/CALCULATIONS.md), and [pricing methodology](docs/PRICING.md) for the behavior and evidence behind the estimates.
+Current release: **v1.3.0**. Read the [release notes](docs/RELEASE_NOTES_v1.3.0.md) for changes and existing-project guidance.
 
-> Hello Solar Planner provides planning estimates, not certified electrical design. A qualified solar/electrical technician must review the final design and installation.
+## Get Started
 
-## Open-Source Philosophy
+Open Hello Solar Planner in your browser. Use the planner address provided by your organization.
 
-Hello Solar Planner is an open-source project by Project Hello World. Communities, partners, and practitioners are free to use, adapt, and modify it for their needs under the [MIT License](LICENSE).
+1. Choose **New Project** or explore the **Sample**.
+2. Enter your site details and appliance loads.
+3. Click **Calculate**.
+4. Compare the two options and review their equipment checks.
+5. Adjust equipment or enter local quotations for the selected option.
+6. Click **Generate Report**, then save a PDF or export CSV.
 
-The default deployment has no backend, no accounts, and no telemetry. Project data remains in the user's browser unless the user exports it.
+See the [user manual](USER_MANUAL.md) for detailed instructions.
 
-## Features
+## What You Can Plan
 
-- Editable project name, country, system voltage, sun hours, autonomy days, currency, and manual USD exchange rate
-- Editable DC and AC load table with quantity, watts, runtime, voltage, surge multiplier, and critical-load flag
-- Explicit **Calculate** action so the plan does not change while a user is still typing
-- Fully DC and Hybrid DC + AC sizing shown side by side
-- Load-sensitive generated solar panels, batteries, controllers, inverter, and balance-of-system equipment
-- Manual equipment and unit-price edits with live adequacy warnings
-- **Use generated values** reset based on the current calculated load
-- Preliminary checks met or Needs attention status for each system option
-- Selected system option controls report and CSV output
-- Deliberate **Generate Report** step before report content is rendered
-- Browser print/save-to-PDF and CSV export
-- Browser LocalStorage project persistence
-- Hello Hub Lite sample project
-- Responsive desktop/tablet/mobile dashboard
-- Production Docker and Docker Compose deployment
+- Daily energy, running power, startup demand and critical-load energy
+- Battery storage, usable energy and estimated autonomy
+- Solar array, charge controller and inverter requirements
+- Independent equipment and cost estimates for both system options
+- Optional startup, battery and PV details under advanced settings
+- Equipment checks marked **passed**, **failed** or **unverified**
+- Reports with assumptions, specification sources, costs and unresolved checks
 
-## Documentation
+A plan remains exportable when equipment information is incomplete. **Needs attention** identifies a failed check or missing information that requires review.
 
-| Document | Audience | Purpose |
-| --- | --- | --- |
-| [USER_MANUAL.md](USER_MANUAL.md) | Planner users | Complete step-by-step operating guide |
-| [SPEC.md](SPEC.md) | Technical reviewers | Functional behavior, formulas, and assumptions |
-| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Self-hosters | Docker, static hosting, Dokploy, HTTPS, upgrades, and troubleshooting |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Developers | Modules, data flow, persistence, and v2 target structure |
-| [ROADMAP.md](ROADMAP.md) | Community and maintainers | Public priorities and future direction |
-| [docs/PRICING.md](docs/PRICING.md) | Planners and maintainers | Regional price baseline, sources, and refresh method |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Contributors | Development and merge-request workflow |
-| [docs/RELEASING.md](docs/RELEASING.md) | Maintainers | Semantic versioning, branches, tags, and release checklist |
-| [SECURITY.md](SECURITY.md) | Deployers/reporters | Supported versions, private reporting, and privacy model |
-| [CHANGELOG.md](CHANGELOG.md) | Everyone | Release history |
+## Understand Your Estimate
 
-## Quick Start
+| Guide | What it explains |
+| --- | --- |
+| [User manual](USER_MANUAL.md) | Entering loads, editing equipment, saving projects and sharing reports |
+| [Calculation guide](docs/CALCULATIONS.md) | Formulas, loss factors, equipment selection and model limits |
+| [Pricing guide](docs/PRICING.md) | Dated regional price allowances and how to use local quotations |
+| [Roadmap](ROADMAP.md) | Planned improvements and contribution opportunities |
+| [Release history](CHANGELOG.md) | Changes in published releases |
 
-Requirements:
+The default prices are dated regional planning allowances. Replace them with current local quotations before procurement. The planner provides estimates; final design and installation require review by a qualified solar or electrical technician.
 
-- Node.js 20.19 or newer
-- npm
+## Your Data
 
-Install and start the development server:
+Projects are saved in the browser you use. There are no accounts or automatic transfers between devices. Clearing browser data can remove saved projects.
 
-```bash
-npm ci
-npm run dev
-```
+PDF and CSV exports provide portable records of a plan; they cannot currently be imported to restore an editable project. The default deployment has no telemetry and does not upload project data.
 
-Open:
+## Open Source and Hosting
 
-```text
-http://127.0.0.1:5173/
-```
+Hello Solar Planner is an open-source project by Project Hello World, available under the [MIT License](LICENSE).
 
-Verify and build:
+For development or hosting, use the [contributor guide](CONTRIBUTING.md), [deployment guide](docs/DEPLOYMENT.md). Implementation, validation and maintenance records are listed in the [maintainer documentation](docs/maintainers/README.md).
 
-```bash
-npm run check
-```
-
-Preview the production build:
-
-```bash
-npm run preview
-```
-
-## Docker Compose
-
-For a partner or production-style deployment:
-
-```bash
-docker compose up -d --build
-```
-
-Open:
-
-```text
-http://localhost:8080
-```
-
-Check status:
-
-```bash
-docker compose ps
-```
-
-Stop:
-
-```bash
-docker compose down
-```
-
-The container exposes `/healthz` for deployment health checks. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for HTTPS, Dokploy, upgrades, customization, and troubleshooting.
-
-## Basic Workflow
-
-1. Load **Sample** or create a **New Project**.
-2. Enter project voltage, sun hours, autonomy, currency, and selected System Option.
-3. Add or edit electrical loads.
-4. Click **Calculate**.
-5. Review daily energy, peak load, surge load, and critical-load energy.
-6. Review Fully DC and Hybrid recommendations.
-7. Adjust equipment quantities, capacities, or prices if needed.
-8. Resolve or document any Needs attention warnings.
-9. Click **Generate Report**.
-10. Print/save PDF or export CSV.
-11. Ask a qualified technician to review the plan before procurement or installation.
-
-## Calculation Summary
-
-Each load contributes:
-
-```text
-running watts = quantity x watts
-daily Wh = running watts x hours per day
-```
-
-Battery storage is based on adjusted daily energy, autonomy, reserve factor, and usable depth of discharge.
-
-Solar sizing uses sun hours:
-
-```text
-recommended solar array W =
-  adjusted daily Wh
-  / sun hours
-  / array derate factor
-  x battery reserve factor
-```
-
-MPPT sizing uses array watts, system voltage, and a safety factor. Hybrid inverter sizing uses the running and credible surge demand of AC loads only.
-
-The complete formulas, rounding rules, and option behavior are documented in [SPEC.md](SPEC.md).
-
-## Project Structure
-
-```text
-src/
-  app/                    Browser persistence and saved-project normalization
-  assets/                 Bundled images and logos
-  data/                   Assumptions, product defaults, branding, and sample project
-  engine/                 Calculations, planning bundles, equipment checks, costing
-  exports/                Printable report and safe CSV generation/download
-  templates/              Eta printable report template
-  types/                  Shared TypeScript contracts
-  utils/                  Shared HTML escaping, identifiers, and formatting
-  main.ts                 Application rendering, UI state, and event binding
-  styles.css              Dashboard, responsive, report, and print styles
-docs/                     Architecture, deployment, review, and release guides
-Dockerfile                Production multi-stage image
-docker-compose.yml        Self-hosted service definition
-nginx.conf                Static server and health endpoint
-.gitlab-ci.yml            GitLab application verification
-.github/workflows/        GitHub application and image verification
-```
-
-## Editable Defaults
-
-Defaults are transparent JSON files:
-
-- `src/data/assumptions.json`: efficiency, reserve, derating, installation, contingency, and safety text
-- `src/data/default-products.json`: starter equipment capacities and Kenya/Uganda regional USD price baselines
-- `src/data/sample-project.json`: Hello Hub Lite example
-- `src/data/brand-profiles.json`: report branding metadata
-
-The starter prices are dated planning baselines rather than quotations. Review [docs/PRICING.md](docs/PRICING.md), localize prices before procurement, and rebuild after changing JSON defaults.
-
-## Data And Privacy
-
-Projects are stored under the browser LocalStorage key:
-
-```text
-hello-solar-planner-state
-```
-
-The saved object includes a schema version. If the planner cannot parse stored data, it keeps the original text under `hello-solar-planner-state-recovery` and loads the sample project instead of deleting the unreadable data.
-
-There is no server-side project storage in v1. Clearing browser data can remove saved projects, and projects are not synchronized between devices. Use PDF and CSV exports as portable records.
-
-Do not embed secrets in source files or JSON defaults. This is a static frontend, so anything bundled into it can be viewed by users.
-
-## Releases
-
-Release tags follow Semantic Versioning:
-
-```text
-vMAJOR.MINOR.PATCH
-```
-
-- `master` is the stable open-source branch and source of release tags.
-- Production deployments should pin to an immutable release tag where possible.
-
-See [docs/RELEASING.md](docs/RELEASING.md) before preparing a release.
-
-## Contributing
-
-Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md) and follow the [Code of Conduct](CODE_OF_CONDUCT.md).
-
-Before opening a merge request:
-
-```bash
-npm ci
-npm run check
-```
-
-Calculation changes must include the formula rationale, representative examples, documentation updates, and automated regression tests.
-
-## Known v1 Limitations
-
-- Automated engine tests are present; browser workflow tests are not yet automated
-- Browser-local persistence only
-- No project JSON import/export
-- No user accounts or collaboration backend
-- Manual exchange-rate entry only
-- English-only interface
-- Project portability, localization, and broader browser-level verification remain future work
-
-See the public [roadmap](ROADMAP.md) for planned improvements and contribution opportunities.
-
-## License
-
-Hello Solar Planner is released under the [MIT License](LICENSE).
-
-## Safety Disclaimer
-
-Hello Solar Planner is for planning estimates only and is not certified electrical design. Final installation must be reviewed by a qualified solar/electrical technician and comply with local electrical, structural, grounding, battery, overcurrent protection, and lightning protection requirements.
+See the [Code of Conduct](CODE_OF_CONDUCT.md) when participating and the [security policy](SECURITY.md) to report a vulnerability.

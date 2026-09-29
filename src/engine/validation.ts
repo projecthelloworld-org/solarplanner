@@ -1,4 +1,5 @@
-import type { Assumptions, EquipmentPlan, LoadItem, Project } from "../types/project";
+import { loadAdvancedFields, ratingFields } from "./fields";
+import type { Assumptions, EngineeringSettings, EquipmentPlan, LoadItem, Project } from "../types/project";
 
 export interface ValidationIssue {
   path: string;
@@ -31,6 +32,10 @@ export function validateLoads(loads: LoadItem[]): ValidationIssue[] {
       ...range(`loads.${index}.hoursPerDay`, `${label} hours per day`, load.hoursPerDay, 0, 24),
       ...range(`loads.${index}.voltage`, `${label} voltage`, load.voltage, 1, 1000),
       ...range(`loads.${index}.surgeMultiplier`, `${label} surge multiplier`, load.surgeMultiplier, 1, 20),
+      ...loadAdvancedFields.flatMap((field) => load[field.key] === undefined ? [] : range(`loads.${index}.${field.key}`, `${label} ${field.label}`, load[field.key]!, field.min, field.max)),
+      ...((load.voltageMin ?? load.voltage) > (load.voltageMax ?? load.voltage) ? [{ path: `loads.${index}.voltageMin`, message: `${label}: supply minimum must not exceed maximum.` }] : []),
+      ...(load.startupVA !== undefined && load.startupVA < load.watts * load.surgeMultiplier ? [{ path: `loads.${index}.startupVA`, message: `${label}: startup VA must be at least startup watts per device.` }] : []),
+      ...(load.startupSeconds === 0 && load.surgeMultiplier > 1 ? [{ path: `loads.${index}.startupSeconds`, message: `${label}: startup duration must be above zero when a surge is entered.` }] : []),
     ];
   });
 }
@@ -44,6 +49,9 @@ export function validateProject(project: Project): ValidationIssue[] {
     ...range("autonomyDays", "Autonomy days", project.autonomyDays, 0.5, 30),
     ...range("usdExchangeRate", "USD exchange rate", project.usdExchangeRate, 0.000001, 1_000_000),
     ...validateLoads(project.loads),
+    ...(project.inverterSettings?.mode === "manual" ? range("inverterSettings.efficiency", "Manual inverter efficiency", project.inverterSettings.efficiency ?? NaN, 0.01, 1) : []),
+    ...(project.inverterSettings?.unloadedHoursPerDay === undefined ? [] : range("inverterSettings.unloadedHoursPerDay", "Unloaded hours", project.inverterSettings.unloadedHoursPerDay, 0, 24 - Math.max(0, ...project.loads.filter((l) => l.currentType === "AC" && l.quantity > 0 && l.watts > 0).map((l) => l.hoursPerDay)))),
+    ...(["dc", "hybrid"] as const).flatMap((id) => validateEngineering(project.optionPlans?.[id]?.engineering).map((issue) => ({ ...issue, path: `optionPlans.${id}.engineering.${issue.path}` }))),
   ];
 }
 
@@ -82,4 +90,34 @@ export function validateEquipmentPlan(plan: EquipmentPlan): ValidationIssue[] {
     ["balance.monitoringCount", "Monitoring quantity", plan.balance.monitoringCount, true],
   ];
   return values.flatMap(([path, label, value, integer]) => nonNegative(path, label, value, integer));
+}
+
+export function validateEngineering(settings: EngineeringSettings | undefined): ValidationIssue[] {
+  if (!settings) return [];
+  const issues: ValidationIssue[] = [];
+  for (const group of ["battery", "inverter", "controller", "panel"] as const) {
+    for (const field of ratingFields[group]) {
+      const value = settings[group]?.[field.key];
+      if (value === undefined) continue;
+      issues.push(...range(`${group}.${field.key}`, field.label, value, field.min, field.max));
+      if (field.integer && !Number.isInteger(value)) issues.push({ path: `${group}.${field.key}`, message: `${field.label} must be a whole number.` });
+    }
+    const ratings = settings[group];
+    if (ratings?.minMpptVoltage !== undefined && ratings.maxMpptVoltage !== undefined && ratings.minMpptVoltage > ratings.maxMpptVoltage) issues.push({ path: `${group}.minMpptVoltage`, message: "MPPT minimum must not exceed maximum." });
+  }
+  for (const key of ["minimumCellTemperatureC", "maximumCellTemperatureC"] as const) if (settings[key] !== undefined) issues.push(...range(key, "Design cell temperature", settings[key]!, -100, 150));
+  if (settings.minimumCellTemperatureC !== undefined && settings.maximumCellTemperatureC !== undefined && settings.minimumCellTemperatureC > settings.maximumCellTemperatureC) issues.push({ path: "minimumCellTemperatureC", message: "Minimum cell temperature must not exceed maximum." });
+  if (settings.pvIscFactor !== undefined) issues.push(...range("pvIscFactor", "PV short-circuit current factor", settings.pvIscFactor, 1, 3));
+  for (const [index, row] of (settings.pvAssignments ?? []).entries()) {
+    if (row.target !== "separate" && row.target !== "integrated") issues.push({ path: `pvAssignments.${index}.target`, message: "Select a separate or integrated controller." });
+    for (const field of ["controllerIndex", "input", "series", "parallel"] as const) {
+      issues.push(...range(`pvAssignments.${index}.${field}`, `PV assignment ${field}`, row[field], 1, 100000));
+      if (!Number.isInteger(row[field])) issues.push({ path: `pvAssignments.${index}.${field}`, message: "PV assignment counts must be whole numbers." });
+    }
+  }
+  const panel = settings.panel;
+  if (panel) for (const field of ["vocTemperatureCoefficient", "vmpTemperatureCoefficient", "iscTemperatureCoefficient"] as const) {
+    if (panel[field] !== undefined && [settings.minimumCellTemperatureC, settings.maximumCellTemperatureC].some((t) => t !== undefined && 1 + panel[field]! / 100 * (t - 25) <= 0)) issues.push({ path: `panel.${field}`, message: "Temperature correction must produce a positive electrical rating." });
+  }
+  return issues;
 }

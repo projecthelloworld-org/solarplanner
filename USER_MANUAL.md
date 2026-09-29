@@ -1,542 +1,205 @@
 # Hello Solar Planner User Manual
 
-Hello Solar Planner is a practical planning tool for estimating solar power systems for community connectivity hubs. It helps you enter electrical loads, compare a Fully DC option with a Hybrid DC + AC option, review equipment needs, estimate costs, and generate a report.
+Use Hello Solar Planner to estimate solar power needs for a community hub, compare equipment options and prepare a report for technical review.
 
-This manual is written for community teams, partners, field technicians, and practitioners using the planner.
+The planner provides estimates. Have a qualified solar or electrical technician review the final design and installation.
 
-## Important Safety Note
+## Start a Project
 
-Hello Solar Planner is for planning estimates only. It is not certified electrical design. Final system design and installation must be reviewed by a qualified solar or electrical technician and must follow local electrical, structural, grounding, and lightning protection requirements.
+Open the planner in your browser. Choose **New Project** for an empty load table or **Sample** to explore the Hello Hub Lite example. Use the project selector to return to a saved project.
 
-## Opening The App
+Enter the following project details:
 
-If you are running the app locally:
-
-```bash
-npm install
-npm run dev
-```
-
-Open:
-
-```text
-http://127.0.0.1:5173/
-```
-
-If you are using Docker Compose:
-
-```bash
-docker compose up --build
-```
-
-Open:
-
-```text
-http://localhost:8080
-```
-
-## Main Screen Overview
-
-The app uses a single-page dashboard layout.
-
-The top area contains:
-
-- project selector
-- **New Project**
-- **Sample**
-
-The left column contains:
-
-- project configuration
-- equipment and pricing
-- sizing assumptions
-
-The main area contains:
-
-- key energy/load cards
-- loads table
-- system option comparison
-- report generation
-
-## Starting A Project
-
-### Use The Sample Project
-
-Click **Sample** to load the Hello Hub Lite sample project. This gives you a useful starting point with routers, access points, tablets, lights, USB charging, monitoring equipment, and a laptop charger.
-
-### Create A New Project
-
-Click **New Project** to create a new project based on the default project structure.
-
-Saved projects are stored in your browser using LocalStorage. There is no server database.
-
-## Project Configuration
-
-Use the **Project** panel to set the planning context.
-
-### Project Name
-
-The name of the site, hub, or installation you are planning.
-
-### Country
-
-The country where the system may be installed. This is used for project context and reporting.
-
-### System Voltage
-
-The nominal DC system voltage, such as `12`, `24`, or `48`.
-
-This affects MPPT/controller current sizing. For the same solar array watts, a lower voltage needs more controller current.
-
-### Sun Hours
-
-The expected average usable sun hours per day.
-
-This affects solar array sizing:
-
-- lower sun hours increase the required solar panel watts
-- higher sun hours reduce the required solar panel watts
-
-### Autonomy Days
-
-The number of days the system should run from battery storage without enough solar charging.
-
-This affects battery sizing:
-
-- more autonomy days increase the required battery storage
-- fewer autonomy days reduce the required battery storage
-
-### System Option
-
-This selects which system option appears in the report and CSV export.
-
-Options:
-
-- **Fully DC**
-- **Hybrid DC + AC**
-
-Both options remain visible in the dashboard for comparison, but only the selected option is included in the generated report and CSV.
-
-## Entering Loads
-
-The **Loads** table is the source of truth for demand. The system sizing is based on the load table after you click **Calculate**.
-
-Each row represents one device type or load group.
-
-### Load Table Columns
-
-| Column | Meaning |
+| Field | What to enter |
 | --- | --- |
-| Name | Device or load group name. |
-| Qty | Number of devices. |
-| Watts (W) | Power draw for one device. |
-| Hours / Day | Estimated daily run time. |
-| Type | Whether the load is DC or AC. |
-| Voltage (V) | Operating voltage for the device. |
-| Surge (x) | Startup/surge multiplier. |
-| Critical | Whether the load is essential. |
+| Project name | The site or installation name. |
+| Country | The project location for the report. |
+| System voltage | Nominal battery-system voltage: 12, 24 or 48 V. |
+| Sun hours | Expected daily peak sun hours for the site; use a suitable low-season value. |
+| Autonomy days | The number of days the battery should support the loads without solar input. |
+| System option | The option you want to edit and include in the report. |
+| Currency and exchange rate | Display currency and its value per USD. Unit prices are entered in USD. |
 
-### Add A Load
+Peak sun hours describe the day's available solar energy as equivalent hours at full sunlight. They are different from daylight hours.
 
-Click **Add load** to add a new row.
+## Enter Your Appliances
 
-Edit the row fields, then click **Calculate** when you are ready to update the sizing.
+Each load row represents one device type or a group of identical devices. The planner uses the values you enter; it does not infer power consumption from the device name.
 
-### Delete A Load
+| Field | Meaning |
+| --- | --- |
+| Name | Appliance or device group. |
+| Quantity | Number of devices. |
+| Watts | Input power consumed by one device, ideally measured. |
+| Hours/day | Expected daily operating time. |
+| AC/DC | The type of supply required by the appliance. |
+| Voltage | Appliance supply voltage. This may differ from battery-system voltage. |
+| Surge multiplier | Startup watts as a multiple of running watts. |
+| Critical | Marks essential loads for the critical-energy total. |
 
-Click the **x** button at the end of a load row to remove it.
+Changing AC/DC type keeps the voltage you entered. Confirm both against the appliance label or documentation.
 
-### Calculate
+Use **Add load** to add a row and the row's remove button to delete it. Zero quantity or zero operating hours excludes a load from demand. All active loads, including non-critical loads, contribute to battery and solar sizing.
 
-Click **Calculate** after editing the load table.
+### Apply Changes
 
-The planner does not recalculate on every keystroke. This lets you finish editing a table before the system recommendation changes.
+Click **Calculate** after editing loads. Added rows, removed rows and advanced load details also wait for this step.
 
-Added and deleted rows also wait for Calculate. A pending-changes message tells you when the cards still represent the last calculation, and the report is held until you calculate. You can edit sidebar values without losing unfinished load rows. Drafts are kept during this session, but are not saved across page reloads until calculated. Blank numbers must be corrected; enter zero deliberately to exclude quantity or hours. New Project opens an empty load table; Sample opens the example equipment list.
+While changes are pending, the results show the last calculation and report generation is held. You can edit other settings without losing unfinished load entries, but calculate before refreshing or leaving the page: unfinished load edits are not saved across reloads.
 
-When you click **Calculate**, the app updates:
+Correct any highlighted invalid values. Required numbers cannot be blank; optional advanced fields may remain blank when the information is unknown.
 
-- daily energy
-- peak load
-- surge load
-- critical load energy
-- Fully DC sizing
-- Hybrid DC + AC sizing
-- equipment adequacy checks
-- cost estimates
-- report data
-- CSV data
+### Optional Load Details
 
-## Understanding The KPI Cards
+Open **Advanced** on a load to enter:
 
-The four cards above the load table summarize the current calculated demand.
+- Running power factor
+- Startup VA per device and startup duration
+- AC frequency
+- Supported minimum and maximum supply voltage
+- Startup group name
 
-### Total Daily Energy
+Enter these values only when you have supporting measurements or specifications. Watts and VA describe different limits; one should not be substituted for the other.
 
-Total estimated energy used by all loads per day.
+By default, one row starts while the other active loads keep running. Rows with the same startup group name start together. You can also select **all active loads restart together** in the advanced equipment settings.
 
-### Peak Load
+## Read the Demand Results
 
-Estimated running watts if all listed loads are operating at once.
+| Result | Meaning |
+| --- | --- |
+| Total daily energy | Energy used by all active loads each day, before system losses. |
+| Peak load | Running watts if all active loads operate together. |
+| Surge load | Startup watts under the selected startup assumption. |
+| Critical-load energy | Daily energy used by loads marked critical. |
 
-### Surge Load
+Critical-load energy identifies priority demand. It does not create a separate critical-only backup scenario.
 
-Estimated worst-case surge load. This is mainly important for inverter sizing in Hybrid systems.
+## Compare System Options
 
-### Critical Load Energy
+**Fully DC** estimates a system supplied through DC distribution. If you entered AC appliances, this option assumes suitable DC replacements at the entered wattages. Confirm replacements and their consumption before relying on the estimate. No inverter is included.
 
-Daily energy from loads marked as critical.
+**Hybrid DC + AC** uses an inverter for AC appliances and a direct DC supply path for DC devices. Equipment losses are included in adjusted daily energy.
 
-This helps separate essential loads from optional or flexible loads.
+Both options remain available for comparison. Each has independent equipment, engineering details and prices. Switching options returns to that option's saved choices. The selected option appears in the PDF and CSV.
 
-## Equipment And Pricing
+## Review Equipment and Prices
 
-The **Equipment & pricing** panel contains generated equipment values and editable prices.
+Open **Equipment & pricing** to review panels, batteries, controllers, inverters and supporting items such as cabling, distribution, earthing and monitoring.
 
-The planner generates equipment from the current load requirements, but you can edit the values manually.
+You can select an equipment reference or enter quantities and capacities manually. Changing a capacity directly may leave the item without a verified matching specification. Check its status before using the estimate for procurement.
+
+Prices are editable USD amounts. The initial values are dated regional allowances, not supplier quotations. Replace them with comparable local quotes and confirm delivery, tax, warranty, mounting and installation scope. See the [pricing guide](docs/PRICING.md).
 
 ### Use Generated Values
 
-Click **Use generated values** to reset equipment quantities and capacities from the current load-based recommendation.
+**Use generated values** recalculates equipment for the selected option and clears its manual equipment-rating overrides. It preserves your entered price overrides, the other option's edits and your load table.
 
-This is useful when you have manually edited equipment and want to return to the calculator's generated plan.
+Review retained quotations whenever equipment changes: a price quoted for one product may not apply to its replacement.
 
-This does not replace your load table.
+### Understand Capacities
 
-### Currency
+- **Battery nominal energy** is the nameplate capacity. For example, 25.6 V × 100 Ah gives 2,560 Wh.
+- **Usable battery energy** allows for the selected depth of discharge. The required nominal battery size already includes this allowance.
+- **Modeled autonomy** estimates runtime without solar from usable storage and adjusted daily demand. The report also shows autonomy retaining the configured reserve.
+- **Controller current** covers the larger of the required solar array and the installed array. Adding panels can increase controller needs.
+- **Inverter capacity** is checked against AC supply, running watts, VA and startup demand. Adding inverter quantities does not establish that they can share a load.
 
-Set:
+Solar sizing covers typical daily energy plus the reserve allowance. It does not guarantee a specific recovery time after cloudy days.
 
-- selected currency
-- manual USD exchange rate
+## Advanced Equipment Settings
 
-All unit prices are entered in USD. Converted totals use the exchange rate you enter.
+Open **Advanced equipment checks** for the selected option when you have additional equipment information. Leave unknown optional values blank.
 
-The values initially shown are dated Kenya/Uganda regional planning baselines, not supplier quotations. Confirm current local prices, delivery, taxes, warranty, and installation costs before procurement. See the [pricing methodology](docs/PRICING.md) for the baseline method and sources.
+Matching catalogue ratings appear as guidance. Entered ratings are your overrides and are identified separately in reports. Clearing an override returns to the catalogue rating where available. Selecting a different product clears that component's previous rating overrides.
 
-### Solar Panels
+### Inverter Efficiency and Unloaded Operation
 
-Set:
+Manufacturer mode uses the selected inverter's documented efficiency when available. Otherwise the planner uses the stated fallback. Choose **Manual override** to supply a project efficiency. The report identifies the effective value and its source.
 
-- number of panels
-- watts per panel
-- USD price per panel
+Enter **energized but unloaded hours/day** only for time when the inverter is on without supplying an AC load:
 
-Solar panels are shared across the Fully DC and Hybrid options.
+- Blank omits this energy and leaves the check unverified.
+- Zero states that there is no unloaded operation.
+- A positive value adds no-load energy to the Hybrid option when a no-load rating is available.
 
-### Batteries
+Loaded conversion losses are already included through efficiency. Do not also add an inverter-idle appliance row for the same consumption. Unloaded hours must fit alongside the longest entered AC operating time.
 
-Set:
+### Battery Ratings
 
-- number of batteries
-- battery voltage
-- Ah per battery
-- USD price per battery
+Optional ratings cover minimum operating voltage, continuous and timed startup limits, charging limits, and charge/float voltage settings.
 
-Battery storage is shared across the Fully DC and Hybrid options.
+Battery current is assessed at minimum operating voltage when known. A nominal-voltage estimate remains unverified if minimum voltage is unavailable. Use recommended operating limits from the matching documentation; a BMS trip threshold is not an operating rating.
 
-### DC Controller
+Series and parallel arrangements must have the appropriate manufacturer approval. An unresolved or zero generated battery quantity means the plan is incomplete.
 
-Set:
+### Panels and Controller Inputs
 
-- number of controllers
-- MPPT/controller amps
-- USD price per controller
+Optional panel ratings include open-circuit voltage (Voc), maximum-power voltage (Vmp), short-circuit current (Isc) and temperature coefficients.
 
-This applies to the Fully DC option.
+Temperature coefficients are percentages per degree Celsius relative to 25°C. Design minimum and maximum temperatures refer to the solar cells, not simply surrounding air.
 
-### Hybrid Inverter
+Assign series modules and parallel strings to each physical controller input. Use one allocation row per input. The planner checks temperature-adjusted voltage and current against the available controller ratings. Missing ratings or allocations leave checks unverified.
 
-Set:
+The default Isc planning factor is 1.25 and can be edited. Integrated inverter MPPT capacity is counted once; a separate controller covers any additional requirement.
 
-- number of controllers
-- MPPT/controller amps
-- number of inverters
-- watts per inverter
-- USD price per inverter
+## Understand Check Results
 
-This applies to the Hybrid DC + AC option.
+| Result | Meaning |
+| --- | --- |
+| **Passed** | The available inputs meet this modeled requirement. |
+| **Failed** | A known value conflicts with a requirement or limit. |
+| **Unverified** | Information is missing or the arrangement has not been established. |
 
-### Balance-Of-System Items
+**Preliminary checks met** means every applicable modeled check passed. **Needs attention** means at least one check failed or remains unverified.
 
-These categories cover supporting equipment:
+Review the individual results and planning notes to see what needs correction or confirmation. For example, a voltage mismatch is a failure; an unknown output frequency is unverified.
 
-- DC Distribution
-- AC Distribution
-- Cabling
-- Earthing
-- Monitoring
+Neither status replaces installation design or certification. You can still export a plan with failed or unverified checks so a technician can review the outstanding information.
 
-Each category has:
+## Create and Share a Report
 
-- quantity
-- USD unit price
+Choose the required system option and click **Generate Report** after calculating pending load changes.
 
-### Sizing Assumptions
+Use **Print / Save PDF** to open the browser print dialog, or **Export CSV** to download a spreadsheet-friendly report.
 
-The assumptions section contains editable planning factors such as:
+Both formats include:
 
-- largest generated panel watts
-- preferred battery voltage and Ah (larger compatible classes may be needed)
-- preferred controller amps (voltage compatibility takes priority)
-- DC efficiency
-- Hybrid DC efficiency
-- inverter efficiency
-- battery depth of discharge
-- battery reserve factor
-- PV derate
-- MPPT safety factor
-- inverter headroom factor
-- installation rate
-- contingency rate
+- Project details and entered loads
+- Selected equipment and cost estimates
+- Effective assumptions and their source
+- Calculated requirements, installed capacities and margins
+- Nominal and usable battery energy and modeled autonomy
+- Product references, specification sources and manual ratings
+- Passed, failed and unverified checks
+- Calculation revision and report date
 
-Only change these values if you understand the local design assumptions or have guidance from a qualified technician.
+The report covers the selected option. To share both options, select and generate each separately.
 
-## System Options
+## Save and Reopen Projects
 
-The planner shows two system options.
+Projects are saved in the same browser on the same device and site address. There is no login or automatic synchronization. Clearing browser data can remove projects.
 
-### Fully DC System
+Keep PDF and CSV records of important plans. These exports cannot currently restore an editable project.
 
-This option assumes the system can supply loads through DC distribution.
+When older projects are opened, saved equipment and quotations are retained for both options. Projects that used the old default efficiency switch to manufacturer mode; a previously customized efficiency is retained. Review any upgrade notice and recalculate before issuing a fresh report, because generated recommendations may change.
 
-It is often useful when devices can run directly from DC power or through small DC converters.
-
-The Fully DC option does not include inverter sizing.
-
-### Hybrid DC + AC System
-
-This option keeps DC supply for network loads while adding inverter capacity for AC devices.
-
-It includes inverter sizing and AC distribution cost where needed.
-
-## Adequacy Status
-
-Each option shows a status:
-
-- **Preliminary checks met**
-- **Needs attention**
-
-### Preliminary Checks Met
-
-The edited/generated equipment meets the planner's high-level capacity comparisons. It does not mean the equipment is electrically compatible or that the installation is certified.
-
-### Needs Attention
-
-One or more capacities are below the requirement, or the plan contains an unresolved issue such as an incompatible battery bank, AC devices in a Fully DC plan, multiple inverters assumed to share a load, or a starter price that no longer matches the panel/inverter rating.
-
-For example:
-
-```text
-Solar array is 900 W; recommendation is 1,000 W.
-Battery storage is 2.56 kWh; recommendation is 3.20 kWh.
-```
-
-You can still generate a report when a plan needs attention. The warning will be included so the reviewer understands the issue.
-
-Open Planning notes beneath each option for the assumptions behind its result. The PDF and CSV include those notes too.
-
-### Reading The Capacity Numbers
-
-- Battery Wh is nominal capacity. The requirement already allows for depth of discharge; do not reduce the listed equipment Wh a second time when comparing. Check nameplate voltage: 25.6 V / 100 Ah stores 2,560 Wh, while 24 V / 100 Ah stores 2,400 Wh.
-- Controller current follows the installed panels, including rounding or extra panels you add. Generation compares 20 A, 30 A, and 60 A catalogue units up to the configured largest size; each controller needs an appropriate share of the PV array.
-- Generated inverters use one suitably rated unit. More inverters cannot automatically power one larger appliance. Match battery voltage, continuous watts, VA and surge duration to the actual inverter.
-- Zero quantity or hours excludes the row. Critical marks priority energy but all active loads still count toward battery autonomy. Peak assumes all active devices run together; surge assumes one group starts while others run.
-- Use low-season peak sun hours. More autonomy needs more batteries, but solar is still sized for daily energy plus reserve; it does not promise a particular recovery time after cloudy weather.
-- Wattage should represent input consumption, ideally measured. For Hybrid, include inverter idle draw as a DC load for its on-hours if significant; exclude that row when estimating Fully DC. Confirm DC converters, USB supplies and PoE equipment for loads at different voltages.
-
-### Prices And Access
-
-Choose 12 V, 24 V or 48 V under System voltage. The generator selects compatible references: LiFePO4 nameplates are typically 12.8 V, 25.6 V and 51.2 V respectively. A light 24 V router plan can use one native 25.6 V / 50 Ah battery without assuming that smaller batteries can be wired in series. The USD 500 allowance applies to the larger 25.6 V / 100 Ah class. Untouched generated plans use compact accessory allowances up to 300 W PV and omit dedicated monitoring for a single light load group.
-
-Battery, controller and inverter reference dropdowns are available inside Equipment & pricing. Selecting a reference applies its voltage/capacity and reference USD price. Quantity remains editable. DC and Hybrid controllers have independent references, quantities and prices. Selecting a compatible single inverter also updates its supplementary controller quantity. Editing a capacity directly changes the item to Custom / unverified. Price notes distinguish matched listings from comparable-class allowances.
-
-Integrated inverters include their documented MPPT capacity and price once. The generated Hybrid plan adds a separate controller only for remaining capacity. The Fully DC plan retains its own controller. Inverter descriptions and reports show nominal input voltage, type and included MPPT amps. A different battery/system voltage does not change daily energy demand, but it changes current and compatible equipment.
-
-When specifications are missing or incompatible, Needs attention explains what remains unresolved. Some large 12 V banks cannot be generated from the small native-voltage reference catalogue because parallel approval is unknown. Obtain a reviewed quote or choose a suitable higher system voltage; do not interpret a zero unresolved equipment quantity as a complete lower-cost system. Older edited plans remain intact and unverified until matched to references. Use generated values to regenerate compatible equipment; manually entered prices remain preserved.
-
-These are editable regional allowances. Editing any price preserves the complete displayed price set with the edited equipment plan. **Use generated values** recalculates equipment but retains genuinely edited prices. Always replace assumptions with comparable local quotations; mounting, tax, delivery, cable lengths, protection, and remote-site work can require a higher allowance. See [pricing evidence](docs/PRICING.md).
-
-All controls can be reached by keyboard. Tab moves between fields, Enter or Space toggles an accordion, and arrow keys scroll the focused load-table region. Focus stays in place after sidebar changes. Errors identify the row and field. Report generation moves focus to the report. On narrow screens the load table scrolls within its panel. Reduced-motion browser preferences are respected. Browser PDF tagging and reading order depend on the browser/print driver and are not formally certified.
-
-## Reports
-
-The report is hidden until you intentionally generate it.
-
-Click **Generate Report** when you are ready to review the selected system option.
-
-After generating the report, you can use:
-
-- **Print / Save PDF**
-- **Export CSV**
-
-### Print / Save PDF
-
-Click **Print / Save PDF** to open the browser print dialog.
-
-From there you can:
-
-- print the report
-- save it as a PDF
-
-The PDF report includes the selected system option only.
-
-### Export CSV
-
-Click **Export CSV** to download a spreadsheet-friendly CSV file.
-
-The CSV includes:
-
-- Project Summary
-- Load Table
-- Technical Sizing Summary
-- Generated / Edited Equipment Plan
-- Selected system recommendation with status and warnings
-- Financial Summary and cost detail
-
-## What The Report Includes
-
-The report includes:
-
-- project summary
-- load table
-- technical sizing summary
-- generated or edited equipment plan
-- selected system recommendation
-- adequacy status and warnings
-- financial summary
-- assumptions
-- safety disclaimer
-
-Only the selected **System Option** is included in the report.
-
-## How Costs Work
-
-Costs are based on editable USD unit prices.
-
-Examples:
-
-```text
-solar cost = panel quantity x USD price per panel
-battery cost = battery quantity x USD price per battery
-controller cost = controller quantity x USD price per controller
-inverter cost = inverter quantity x USD price per inverter
-```
-
-The selected currency total is calculated using:
-
-```text
-converted amount = USD amount x USD exchange rate
-```
-
-Installation and contingency are calculated from the editable assumption rates.
-
-## How The Main Sizing Works
-
-The planner uses the load table to calculate demand.
-
-### Daily Energy
-
-```text
-daily Wh = quantity x watts x hours per day
-```
-
-### Battery Sizing
-
-Battery storage depends on:
-
-- adjusted daily energy
-- autonomy days
-- reserve factor
-- usable depth of discharge
-
-Sun hours do not affect battery Wh sizing.
-
-### Solar Array Sizing
-
-Solar array sizing depends on:
-
-- adjusted daily energy
-- sun hours
-- PV derate factor
-- reserve factor
-
-Lower sun hours increase the recommended solar array watts.
-
-### MPPT Controller Sizing
-
-MPPT/controller current depends on:
-
-- recommended solar array watts
-- system voltage
-- MPPT safety factor
-
-### Hybrid Inverter Sizing
-
-Hybrid inverter size depends on:
-
-- AC running load
-- the credible surge case across AC loads
-- inverter headroom factor
-
-## Saving And Storage
-
-Projects are saved in the browser using LocalStorage.
-
-This means:
-
-- saved projects are available in the same browser on the same device
-- clearing browser storage may remove saved projects
-- no login or server database is required
-- if saved data becomes unreadable, the planner preserves a recovery copy in browser storage and opens the sample project
-
-## Recommended Workflow
-
-1. Start with **Sample** or **New Project**.
-2. Enter project details.
-3. Add or edit loads.
-4. Click **Calculate**.
-5. Review the KPI cards.
-6. Review both system options.
-7. Edit equipment quantities or prices if needed.
-8. Check whether each option shows **Preliminary checks met** or **Needs attention**.
-9. Choose the desired **System Option**.
-10. Click **Generate Report**.
-11. Print/save PDF or export CSV.
-12. Share the report with a qualified technician for review.
+If the planner displays a storage or recovery warning, follow its guidance and keep an exported record before clearing browser data. Work done while saving is unavailable may only last for the current session.
 
 ## Troubleshooting
 
-### The numbers did not change after editing a load
+| Issue | What to check |
+| --- | --- |
+| Results do not reflect load edits | Click **Calculate** and correct highlighted inputs. |
+| Manual equipment values changed | **Use generated values** resets equipment for the selected option. Check which option is selected. |
+| Report shows the wrong option | Select the intended system option and generate the report again. |
+| Costs look wrong | Review unit prices, equipment quantities, currency, exchange rate, installation and contingency rates. |
+| Equipment is unresolved | Review failed and unverified checks; obtain a matching specification or quotation. |
+| A project is missing | Check the browser, device and site address used to create it. Clearing browser data may remove saved projects. |
 
-Click **Calculate** after editing the load table.
+## Keyboard and Smaller Screens
 
-### My manual equipment edits disappeared
+Use Tab to move between controls, and Enter or Space to open expandable sections. On narrow screens, scroll the load table within its panel to reach additional columns. Highlighted errors identify the row and field that needs attention.
 
-Manual equipment edits are reset when you click **Use generated values**.
+## Further Reading
 
-### The report shows the wrong option
-
-Check the **System Option** field in the Project panel. The report and CSV include only the selected option.
-
-### Costs look wrong
-
-Check:
-
-- USD unit prices in Equipment & pricing
-- selected currency
-- USD exchange rate
-- installation rate
-- contingency rate
-
-### Saved projects disappeared
-
-The app stores projects in browser LocalStorage. Clearing browser data can remove saved projects.
-
-## Open-Source Use
-
-Hello Solar Planner is an open-source project by Project Hello World. It is free for communities, partners, and practitioners to use, adapt, and modify based on their needs.
-
-## Final Reminder
-
-Use this tool as a planning estimate. Before procurement or installation, have the final design reviewed by a qualified solar/electrical technician.
+See the [calculation guide](docs/CALCULATIONS.md) for formulas and model boundaries and the [pricing guide](docs/PRICING.md) for price evidence. Hosting and development instructions are in the [maintainer documentation](docs/maintainers/README.md).

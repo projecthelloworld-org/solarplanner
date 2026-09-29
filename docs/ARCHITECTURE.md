@@ -1,5 +1,7 @@
 # Architecture
 
+Developer reference. For operating the planner, see the [user manual](../USER_MANUAL.md).
+
 ## Overview
 
 Hello Solar Planner is a client-only TypeScript application built with Vite. It uses Eta for the printable report template and browser LocalStorage for project persistence. There is no application server or database in the default deployment.
@@ -93,7 +95,9 @@ The app normalizes saved projects on load so newly introduced fields receive def
 
 The load table becomes the demand source of truth when the user clicks **Calculate**. Manual equipment edits remain active until the user clicks **Use generated values**.
 
-The dashboard calculates both options. `selectedSystem` filters only report and CSV output.
+The dashboard calculates both options independently. `selectedSystem` selects the equipment, engineering settings and prices being edited, and the option used for report and CSV output.
+
+Schema 2 stores independent option plans and preserves legacy equipment and quotations during migration. Backup and regression details are in [calculation validation](maintainers/CALCULATION_VALIDATION.md).
 
 ## Extension Boundaries
 

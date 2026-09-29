@@ -1,3 +1,5 @@
+> Technical reference for contributors and reviewers. For planner guidance, see the [user manual](USER_MANUAL.md) and [calculation guide](docs/CALCULATIONS.md). Calculation revision 2.0; storage schema 2. [Validation cases](docs/maintainers/CALCULATION_VALIDATION.md) are maintained separately.
+
 # Hello Solar Planner v1 Specification
 
 This document describes the intended behavior, calculations, data flow, reporting, and limitations for Hello Solar Planner.
@@ -100,7 +102,7 @@ Rows with zero quantity or zero hours are inactive and excluded from both power 
 
 ### Surge Load
 
-Each load has a surge multiplier. The app estimates the worst surge case by assuming one load group surges while all other loads continue running:
+Each load has a surge multiplier. By default one row or explicitly named startup group surges while other loads run; an all-load restart option is also available:
 
 ```text
 surge watts for load = running watts x surge multiplier
@@ -139,7 +141,7 @@ The Hybrid option treats DC and AC loads separately:
 ```text
 DC load adjusted Wh = DC load daily Wh / hybrid DC efficiency
 AC load adjusted Wh = AC load daily Wh / inverter efficiency
-hybrid adjusted daily Wh = sum(DC adjusted Wh + AC adjusted Wh)
+hybrid adjusted daily Wh = sum(DC adjusted Wh + AC adjusted Wh) + unloaded inverter Wh
 ```
 
 This means AC loads usually require more stored and generated energy because inverter losses are included.
@@ -156,7 +158,7 @@ required battery Wh =
   / battery depth of discharge
 ```
 
-Battery sizing is rounded up to the next 100 Wh.
+Battery sizing retains full precision through equipment selection. Only display formatting rounds.
 
 This is required **nominal** storage; depth of discharge has already been accounted for once. Installed nominal Wh is quantity x nameplate voltage x Ah. Usable Wh is nominal Wh x DoD. Do not compare usable installed Wh against this nominal requirement. Energy capacity does not establish that battery/BMS peak discharge current is sufficient.
 
@@ -179,7 +181,7 @@ recommended solar array W =
   x battery reserve factor
 ```
 
-Solar array sizing is rounded up to the next 10 W.
+Solar array sizing retains full precision through equipment selection.
 
 Interpretation:
 
@@ -199,7 +201,7 @@ recommended MPPT current A =
   x MPPT safety factor
 ```
 
-MPPT sizing is rounded up to the next 5 A.
+MPPT current retains full precision; catalogue controller quantities are whole numbers.
 
 Generation and adequacy checks also calculate current from the **installed** panel count x panel watts. The displayed requirement is the greater of demand-based and installed-array current. Compatible whole controllers cover both this current and documented PV input power; Hybrid integrated MPPT contributes once. Multiple controllers need independently allocated PV strings and coordinated battery charging. The planner checks nominal voltage and rated input power but cannot validate string Voc, Isc, cold-weather voltage or BMS charge limits without those site specifications. The 1.25 factor remains an editable planning margin; approved PV oversizing/clipping can differ.
 
@@ -224,9 +226,9 @@ recommended inverter W = max(
 )
 ```
 
-The result is rounded up to the next 100 W.
+The conservative watt target retains full precision. Verified W/VA/duration ratings can satisfy startup separately from continuous duty.
 
-Generation filters single inverters by nominal input voltage and continuous wattage, then compares inverter plus separate-controller cost against integrated-MPPT combinations. It never invents wattage beyond the catalogue. The old inverterWattStep field remains readable for compatibility but is no longer a sizing limit or visible setting. Edited multi-inverter plans retain aggregate watts but show Needs attention; integrated MPPT is only credited for one matched unit. Continuous W, VA/power factor, surge duration and temperature must still be checked. Efficiency remains an operating allowance; idle consumption is not separately inferred.
+Generation filters single inverters by nominal input voltage and continuous wattage, then compares complete candidate equipment cost, recalculating energy, PV, batteries and controllers with that candidate's efficiency. It never invents wattage beyond the catalogue. The old inverterWattStep field remains readable for compatibility but is no longer a sizing limit or visible setting. Edited multi-inverter plans retain aggregate watts but show Needs attention; integrated MPPT is only credited for one matched unit. Continuous W, VA/power factor, surge duration and temperature must still be checked. Each hybrid candidate uses its own documented efficiency, with explicit manual override and fallback precedence. Unloaded hours are optional and add idle energy once; missing hours remain unverified.
 
 The Fully DC option does not require an inverter. A Hybrid project with no AC loads also has a zero inverter requirement.
 
@@ -244,7 +246,7 @@ For bank topology, 12.8/25.6/51.2 V LiFePO4 maps to 12/24/48 V. The project sele
 
 Equipment plans persist product IDs for panels, batteries, DC/Hybrid controllers and inverters. Specifications resolve from the authoritative JSON catalogue, never from imported user-supplied metadata. Edited capacities invalidate their selected identity. Product selectors apply the named reference's capacity and base price; manual price edits and saved equipment remain intact during recalculation. DC and Hybrid controllers have independent references, quantities and prices. The optional hybridControllerUnitUsd defaults to the legacy controller price when absent. Selecting a compatible single inverter recalculates its supplementary controller quantity; subsequent manual quantity edits remain possible. Battery/inverter source notes identify comparable pricing and revision uncertainty. Catalogue records include optional supported voltages, current/connection/PV limits, inverter type, MPPT capacity and price evidence. Legacy missing fields remain unverified rather than being silently inferred.
 
-Solar and battery equipment are shared across Fully DC and Hybrid options. The generator uses the larger requirement between the two options so the shared equipment can support either path. Catalogue choice is a transparent budgeting heuristic, not a supplier recommendation or component compatibility approval.
+Solar and battery equipment, costs, checks, custom edits and price overrides are independent for Fully DC and Hybrid. Selection uses each option's own requirement. Catalogue choice is a transparent budgeting heuristic, not a supplier recommendation or component compatibility approval.
 
 ## Editable Equipment And Pricing
 
@@ -264,7 +266,7 @@ The side panel keeps equipment quantities, capacities, and prices together in ac
 
 Currency is folded by default. Solar Panels is open by default. Prices are entered as USD base unit prices, and totals are displayed in the selected project currency using the manual exchange rate.
 
-Starter prices use dated Kenya/Uganda retail observations and explicit allowances, not a statistically representative market average. An untouched generated plan uses the catalogue price matching its selected product class and a compact or hub-scale balance-of-system allowance. Any price edit freezes the current equipment and all displayed prices; Use generated values resets quantities/capacities while retaining those edited prices. Existing projects with local prices remain local. The source checks and limits are documented in `docs/PRICING.md`.
+Starter prices use dated Kenya/Uganda retail observations and explicit allowances, not a statistically representative market average. An untouched generated plan uses the catalogue price matching its selected product class and a compact or hub-scale balance-of-system allowance. Price edits create explicit overrides for the selected option. Use generated values resets that option's equipment and manual equipment-rating overrides while retaining quoted prices. Existing projects with local prices remain local. The source checks and limits are documented in `docs/PRICING.md`.
 
 ## Adequacy Checks
 
@@ -277,7 +279,7 @@ The app checks:
 - total current capacity across the selected MPPT/controllers vs recommended MPPT current
 - current Hybrid inverter W vs recommended inverter size
 
-If all required values are met, the option shows **Preliminary checks met**. This is a capacity comparison, not certification of component compatibility, protection, cable sizing, or installation design.
+Each applicable check is passed, failed or unverified. Only if every applicable modeled check passes does the option show **Preliminary checks met**. This is a capacity comparison, not certification of component compatibility, protection, cable sizing, or installation design.
 
 If one or more values are below recommendation, the option shows **Needs attention** and lists specific warnings, for example:
 
@@ -288,7 +290,7 @@ Battery storage is 2.56 kWh; recommendation is 3.20 kWh.
 
 Users can still print or export reports when a plan needs attention. The report and CSV preserve the edited equipment and warnings.
 
-Needs attention also covers an empty demand list, an incompatible battery bank, more than four parallel battery strings, AC loads still listed in a Fully DC plan, assumed parallel inverters, and clearly mismatched starter panel/inverter prices. Contextual planning notes identify DC conversion, BMS ratings, surge assumptions and pricing limits; these are carried into PDF and CSV. This extends the existing adequacy explanation, without adding a component-design workflow.
+Needs attention also covers an empty demand list, an incompatible battery bank, more than four parallel battery strings, AC loads still listed in a Fully DC plan, assumed parallel inverters, and clearly mismatched starter panel/inverter prices. Contextual planning notes identify DC conversion, BMS ratings, surge assumptions and pricing limits; these are carried into PDF and CSV. Optional advanced ratings add AC output, startup, battery minimum-voltage/current, charging and PV string checks. Missing evidence stays unverified; exports remain available.
 
 ## Costing
 

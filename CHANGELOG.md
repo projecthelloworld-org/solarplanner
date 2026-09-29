@@ -8,6 +8,19 @@ The project follows [Semantic Versioning](https://semver.org/). Release tags use
 
 Use this section for changes that have not yet been included in a tagged release.
 
+## 1.3.0 - 2026-09-29
+
+- Use precise requirements for equipment selection and independent Fully DC and Hybrid plans.
+- Apply product-specific inverter efficiency and optional unloaded energy with clear assumptions.
+- Add optional startup groups, VA, duration, supply frequency and voltage ranges.
+- Add battery operating and charging checks and temperature-aware PV/controller input checks.
+- Distinguish passed, failed and unverified checks in the dashboard, PDF and CSV.
+- Preserve saved equipment and quotations when upgrading and when switching system options.
+- Expand reports with specification sources, installed margins, usable storage and modeled autonomy.
+- Simplify user-facing documentation and separate maintainer records.
+
+See the [release notes](docs/RELEASE_NOTES_v1.3.0.md) for existing-project guidance.
+
 ## 1.2.0 - 2026-09-07
 
 - Add 12/24/48 V catalogue selection, native small 24 V and 48 V batteries, and input-voltage-specific inverter references with traceable prices.
