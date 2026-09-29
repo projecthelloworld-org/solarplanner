@@ -42,7 +42,15 @@ This module should remain deterministic and independent of the browser DOM.
 
 ### `src/engine/equipment.ts`
 
-Creates generated equipment quantities and checks whether the active equipment plan meets calculated requirements.
+Enumerates fixed-product equipment combinations, calculates minimum required quantities and filters known engineering conflicts. It also checks the active generated or edited plan against demand.
+
+### `src/engine/balanced-fit.ts`
+
+Ranks eligible complete combinations within the 10% equipment-cost window using combined proportional capacity excess, then cost, unit count and stable reference order.
+
+### `src/engine/pricing.ts`
+
+Classifies price evidence and identifies retained quotations needing review after equipment changes. The dashboard and reports share these price details.
 
 ### `src/engine/costing.ts`
 
@@ -54,7 +62,7 @@ Creates explanatory Fully DC and Hybrid recommendation text.
 
 ### `src/engine/planner.ts`
 
-Enumerates complete equipment combinations and applies the shared balanced-fit ranking before composing calculation, equipment, costing, and recommendation results into the bundle consumed by the dashboard and selected report. It keeps orchestration out of the DOM layer without duplicating formulas.
+Evaluates inverter-specific energy requirements and applies the shared balanced-fit ranking across complete equipment combinations before composing calculation, equipment, costing, and recommendation results into the bundle consumed by the dashboard and selected report. It keeps orchestration out of the DOM layer without duplicating formulas.
 
 ### `src/app/persistence.ts`
 

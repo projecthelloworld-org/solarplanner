@@ -22,6 +22,7 @@ Examples:
 ## Branch Roles
 
 - `master`: reusable open-source product and source of release tags
+- `phw`: maintained hosted variant with its landing page and `/solar/` route
 - short-lived feature/fix branches: reviewed changes before merge
 
 Reusable releases are tagged on `master`. After incorporating that release into `phw`, tag the hosted variant as `vX.Y.Z-phw`. The hosted tag identifies its landing page and `/solar/` deployment layout; it does not replace the standalone release tag.
@@ -31,7 +32,7 @@ Reusable releases are tagged on `master`. After incorporating that release into 
 1. Confirm the working tree contains only intended changes.
 2. Update `package.json` and `package-lock.json` to the release version.
 3. Move completed entries from Unreleased into a dated section in `CHANGELOG.md`.
-4. Update README, user manual, specification, and deployment docs.
+4. Add release notes and update README, user manual, specification and deployment references. Check price labels, selection rules, report contents, calculation revision and local documentation links. Keep historical release notes unchanged.
 5. Run:
 
 ```bash
@@ -48,14 +49,15 @@ docker compose config
 git tag -a vX.Y.Z -m "Hello Solar Planner vX.Y.Z"
 ```
 
-9. Push the branch and tag to each maintained public mirror:
+9. Incorporate the standalone release into `phw`, preserving hosted-only files. Validate its build and browser route, then create the annotated `vX.Y.Z-phw` tag.
+10. Push both branches and their new tags to each configured mirror:
 
 ```bash
-git push <remote> master
-git push <remote> vX.Y.Z
+git push --atomic <remote> master phw refs/tags/vX.Y.Z refs/tags/vX.Y.Z-phw
 ```
 
-10. Create GitLab and GitHub releases from the same immutable tag using the corresponding changelog section.
+11. Verify remote branch and tag targets. Never force-update an existing release tag.
+12. Publish release notes on the Project Hello World Gitea repository and GitHub. If hosting permissions block a release page, report the limitation separately from successful branch/tag pushes. Do not bypass organization access restrictions.
 
 ## Hotfixes
 

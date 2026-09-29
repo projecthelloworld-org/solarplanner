@@ -4,11 +4,11 @@ This roadmap describes the public direction of Hello Solar Planner. It is a guid
 
 ## Product Principles
 
-- Keep the planner lightweight, understandable, and deployable as a static application.
+- Keep the planner lightweight, understandable, and easy to host.
 - Preserve transparent formulas, editable assumptions, and portable outputs.
 - Prefer practical planning guidance over false engineering precision.
 - Treat local measurements, supplier quotations, and qualified technical review as essential inputs.
-- Avoid requiring accounts, a backend, or continuous connectivity for the core workflow.
+- Avoid requiring accounts or continuous connectivity for the core workflow.
 
 ## Current Focus
 
@@ -28,7 +28,8 @@ This roadmap describes the public direction of Hello Solar Planner. It is a guid
 ### Pricing Quality
 
 - Refresh African market planning estimates at least every six months.
-- Expand named-product evidence while clearly distinguishing quotations from comparable-class allowances.
+- Fill remaining size and voltage gaps where reliable prices and specifications are available.
+- Expand named-product evidence while clearly distinguishing quotations from representative size estimates.
 - Define what is included in distribution, cabling, earthing, monitoring, installation, tax, delivery, and remote-site logistics.
 - Preserve the price evidence and assumptions used for each planning report.
 
@@ -56,7 +57,7 @@ These ideas require community validation before implementation:
 - optional hourly or seasonal energy modeling; and
 - an optional collaboration service for teams that need shared projects and history.
 
-Any server-backed capability should remain optional so the core planner can continue to run locally or from simple static hosting.
+Any collaboration service should remain optional so teams can continue using the planner independently.
 
 ## Out Of Scope For The Core Planner
 

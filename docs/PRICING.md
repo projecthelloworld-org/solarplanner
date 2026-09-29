@@ -8,20 +8,36 @@ Unit prices are editable USD amounts. Generated equipment uses the price for its
 
 The reference observations date from August–September 2026. Additional size estimates were reviewed on 29 September 2026. They are not live supplier quotations. Compare equipment specifications, warranty, tax and delivery terms before replacing an allowance with a local quotation.
 
-## Optional Budgeting Range
+## Three Different Percentage Allowances
 
-The optional ±10% range does not automatically change planner totals. It is separate from the existing contingency allowance; do not add it again as a contingency for the same cost uncertainty.
+| Percentage | Purpose | Effect on the total |
+| --- | --- | --- |
+| **10% equipment-selection window** | Lets the planner choose a closer combined capacity fit among similarly priced eligible combinations. | The selected equipment may cost more than the cheapest combination. No 10% fee is added. |
+| **Optional ±10% budgeting range** | An assumption for exploring initial budget uncertainty. | Does not automatically change the estimate. It is not a measured market range. |
+| **Contingency, initially 10%** | A separate allowance applied to equipment plus installation. | Added to the total at the configured rate. |
 
-For example, a listed USD 500 allowance gives an illustrative range of USD 450–550. This is a way to explore a budget, not a prediction that a supplier's price will fall within that range. No global price benchmark is applied by the planner.
+For example, the optional budgeting range around a USD 500 estimate is USD 450–550. Actual quotations may fall outside that range. Do not add it again as contingency for the same uncertainty. No global price benchmark is applied.
+
+## Available Sizes and Price Basis
+
+The panel selector includes 50, 100, 160, 200, 330, 450 and 550 W references. Battery choices include 12.8 V at 20/40/50/100 Ah, 25.6 V at 50/100 Ah and 51.2 V at 50/100 Ah. MPPT choices include 10/20/30/40/60/100 A; supported battery voltages vary. Not every size is suitable for every system.
+
+Representative size estimates use observed comparable retail prices, not a measured continent-wide average. New references retain their original currencies, dates and conversion assumptions in the equipment reference CSV and maintainer evidence. Premium and basic equipment can differ substantially in price even at the same current rating. Unknown electrical ratings remain unverified.
+
+Balanced selection compares complete equipment subtotals, then favors closer combined capacity fit within a 10% cost window. This does not multiply your estimate by 10%, change your chosen contingency, or apply the optional ±10% budgeting range.
 
 ## Reference Prices
 
-These examples are unit allowances, not complete installed-system quotations. The [equipment reference CSV](../EQUIPMENT_PRICING_REFERENCE.csv) provides the full catalogue, product references and source notes.
+These examples are unit allowances, not complete installed-system quotations. Different references can have different features and prices: a smaller unit is not necessarily cheaper. Compact systems may use lower supporting-item allowances. The [equipment reference CSV](../EQUIPMENT_PRICING_REFERENCE.csv) provides the full catalogue, product references and source notes.
 
 | Category | Specification or allowance | USD reference |
 | --- | --- | ---: |
+| Solar panel | 50 W size estimate | 35 |
+| Solar panel | 160 W size estimate | 75 |
 | Solar panel | 200 W monocrystalline | 65 |
 | Solar panel | 450 W monocrystalline | 110 |
+| LiFePO4 battery | 12.8 V, 20 Ah / 256 Wh size estimate | 70 |
+| LiFePO4 battery | 12.8 V, 50 Ah / 640 Wh size estimate | 155 |
 | LiFePO4 battery | 12.8 V, 100 Ah / 1.28 kWh | 220 |
 | LiFePO4 battery | 25.6 V, 100 Ah / 2.56 kWh | 500 |
 | MPPT controller | 30 A, 12/24 V planning class | 75 |
@@ -29,7 +45,7 @@ These examples are unit allowances, not complete installed-system quotations. Th
 | Integrated inverter | 12 V, 1 kW with 60 A MPPT | 220 |
 | Integrated inverter | 24 V, 2 kW with 60 A MPPT | 310 |
 | Integrated inverter | 48 V, 5 kW with 80 A MPPT | 570 |
-| DC distribution | Small-system protection allowance | 100 |
+| DC distribution | Hub protection allowance | 100 |
 | AC distribution | Small-system protection allowance | 90 |
 | Cabling | Small hub cable and connector allowance | 140 |
 | Earthing | Small hub earthing and lightning allowance | 140 |
@@ -43,7 +59,7 @@ These examples are unit allowances, not complete installed-system quotations. Th
 - Contingency is added at the configured rate, initially 10% of equipment plus installation.
 - The selected display currency uses the exchange rate you enter. Selecting a country does not automatically change prices or exchange rates.
 
-The optional ±10% budgeting range described above is not an additional charge in this calculation.
+Each line shows quantity × unit price = line total. The optional ±10% budgeting range is not an additional charge.
 
 ## Keeping Local Quotations
 
@@ -56,11 +72,3 @@ Integrated MPPT capacity is included in a hybrid inverter's price once. Any sepa
 Obtain quotations for matching equipment and confirm delivery, tax, warranty, mounting and installation scope. Cable lengths, protection requirements, lightning exposure and remote-site work can change the total substantially. These costs are not reliably covered by supplier listing prices or broad allowances.
 
 Keep quotation dates and specification evidence with the project records. The [maintainer evidence record](maintainers/PRICING_EVIDENCE.md) preserves the original research and its limitations.
-
-## Available Sizes and Price Basis
-
-The panel selector includes 50, 100, 160, 200, 330, 450 and 550 W references. Battery choices include 12.8 V at 20/40/50/100 Ah, 25.6 V at 50/100 Ah and 51.2 V at 50/100 Ah. MPPT choices include 10/20/30/40/60/100 A; supported battery voltages vary. Not every size is suitable for every system.
-
-Representative size estimates use observed comparable retail prices, not a measured continent-wide average. New references retain their original currencies, dates and conversion assumptions in the equipment reference CSV and maintainer evidence. Premium and basic equipment can differ substantially in price even at the same current rating. Unknown electrical ratings remain unverified.
-
-Balanced selection compares complete equipment subtotals, then favors closer combined capacity fit within a 10% cost window. This does not multiply your estimate by 10%, change your chosen contingency, or apply the optional ±10% budgeting range.

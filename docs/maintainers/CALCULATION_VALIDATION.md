@@ -16,3 +16,13 @@ For contributors and maintainers. These cases verify general calculation rules; 
 ## Persistence
 
 Schema v2 migrates legacy equipment and prices into both independent option records. Old default 88% efficiency becomes manufacturer mode; non-default efficiency becomes an explicit override. Original storage is backed up before saving migrated data. If the backup cannot be written, saving is held until it can be preserved. Repeated migration does not overwrite the backup or duplicate settings.
+
+## Equipment selection revision 2.1
+
+The balanced-fit tests verify the inclusive 10% equipment-subtotal window, proportional excess ranking and deterministic tie breaks. They also cover the controller cost of larger panels, smaller native batteries without inferred series/parallel approval, exclusion of known charge-setting conflicts, price evidence consistency and dashboard/report agreement.
+
+With the current catalogue and defaults, the two-DC-load fixture totals USD 2,335.08 for each option. It selects five 100 W panels, two 25.6 V 100 Ah batteries and one 30 A controller. This differs from the historical v1.3.2 total of USD 2,188.34 because the complete-combination fit rule changed. Keep historical release figures tied to their release; they are not universal mathematical invariants.
+
+A single-router fixture selects a 160 W panel, a 25.6 V 50 Ah battery and a 10 A controller, totaling USD 631.62. A 12 V fixture using 5 W for eight hours can select one 12.8 V 20 Ah battery. Generic references keep missing electrical ratings unverified.
+
+Browser checks cover reference selection, immediate capacity/price changes, quotation resets and preservation, reload persistence, collapsed unverified checks, keyboard operation and narrow layouts. PDF/CSV checks cover selection explanation, capacity fit and shared price classification.

@@ -88,27 +88,36 @@ Both options remain available for comparison. Each has independent equipment, en
 
 Open **Equipment & pricing** to review panels, batteries, controllers, inverters and supporting items such as cabling, distribution, earthing and monitoring.
 
-You can select an equipment reference or enter quantities and capacities manually. Panel, battery and controller choices show their sizes and USD unit prices. **Representative size estimate** means a comparable equipment-class price; it does not verify the brand or electrical ratings of equipment you purchase. **Named product reference** identifies a specific product; its price may still use comparable-class evidence. Selecting a different reference uses its reference price and clears the previous price override for that item. Quantity edits update line totals immediately while keeping the unit price. Changing a capacity directly may leave the item without a verified matching specification. Check its status before using the estimate for procurement.
+Select a panel, battery, controller or inverter reference to see its capacity and USD unit price, or enter custom equipment values. Selecting another reference applies its price and replaces any quotation entered for that item. Changing quantity updates the line total immediately without changing the unit price.
 
-Prices are editable USD amounts.
+Changing capacity manually can leave the equipment without a matching reference. Its electrical ratings and price then need review.
+
+Each equipment section shows **quantity × unit price = line total**. The price labels mean:
+
+| Price label | Meaning |
+| --- | --- |
+| **Named product reference** | A planning price associated with a specific catalogue product. Confirm a current quotation. |
+| **Representative size estimate** | A price based on comparable equipment. It does not verify the brand or electrical ratings of your equipment. |
+| **User quotation** | A unit price you entered. Review it if the associated equipment changes. |
+| **Unverified allowance** | A budget allowance without a matching equipment price, including supporting installation items. |
+
+Use **Use reference price** to remove an entered quotation. If the capacity has no matching reference, the remaining price is still an unverified allowance. Prices are not automatically scaled from watts or Ah.
 
 Prices are indicative African market planning estimates. A ±10% variation around the listed estimates may be used for initial budgeting; this is a planning assumption, not a measured market range or a verified comparison with global averages. Actual costs may fall outside this range. Confirm current local quotations before procurement.
 
 The optional ±10% range does not automatically change planner totals. It is separate from the existing contingency allowance; do not add it again as a contingency for the same cost uncertainty. Confirm delivery, tax, warranty, mounting and installation scope. See the [pricing guide](docs/PRICING.md).
 
-Each equipment section shows quantity × unit price = line total. Prices are labelled **Reference price**, **User quotation** or **Unverified allowance**. Use **Use reference price** to remove a quotation override. For custom capacities without a matching product, the price is an unverified allowance; obtain a quotation rather than assuming price scales with capacity.
-
 Each option card identifies generated or manually edited equipment and separates required solar capacity from installed panels. Open **Equipment and cost breakdown** to compare installed items, prices, installation and contingency. For DC-only loads, generated DC and Hybrid options can cost the same because no inverter is needed. Different installed quantities or quotations can make either option more expensive.
 
-### Use Generated Values
+### How Equipment Is Chosen
 
 Generated plans choose the closest combined capacity fit among eligible equipment combinations within 10% of the cheapest equipment subtotal. Existing safety margins remain included. Open **Required and installed capacity** to see the requirement, installed capacity and excess percentage for panels, batteries and controllers. A larger array may sometimes reduce controller excess, so the balanced choice is not always the smallest array or the fewest units. Unit-size preferences and documented battery connection limits still apply.
 
 This selection window is separate from the optional ±10% budgeting assumption and from contingency; it adds no automatic charge. Existing quotations can change which combination is most economical. Review retained quotations whenever their associated equipment changes.
 
-**Use generated values** recalculates equipment for the selected option and clears its manual equipment-rating overrides. It preserves your entered price overrides, the other option's edits and your load table.
+### Reset Equipment
 
-Review retained quotations whenever equipment changes: a price quoted for one product may not apply to its replacement.
+**Use generated values** recalculates equipment for the selected option and clears its manual equipment-rating overrides. It preserves your entered price overrides, the other option's edits and your load table.
 
 ### Understand Capacities
 
@@ -166,6 +175,8 @@ The default Isc planning factor is 1.25 and can be edited. Integrated inverter M
 
 **Preliminary checks met** means every applicable modeled check passed. **Needs attention** means at least one check failed or remains unverified.
 
+**Unverified checks (count)** starts closed. Click it, or use Enter or Space, to see the missing information. Failed checks and the overall status stay visible. Open **All equipment checks** for the complete list.
+
 Review the individual results and planning notes to see what needs correction or confirmation. For example, a voltage mismatch is a failure; an unknown output frequency is unverified.
 
 Neither status replaces installation design or certification. You can still export a plan with failed or unverified checks so a technician can review the outstanding information.
@@ -179,9 +190,9 @@ Use **Print / Save PDF** to open the browser print dialog, or **Export CSV** to 
 Both formats include:
 
 - Project details and entered loads
-- Selected equipment and cost estimates
+- Selected equipment, line costs and price basis
 - Effective assumptions and their source
-- Calculated requirements, installed capacities and margins
+- Calculated requirements, installed capacities, margins and excess percentages
 - Nominal and usable battery energy and modeled autonomy
 - Product references, specification sources and manual ratings
 - Passed, failed and unverified checks
@@ -206,6 +217,7 @@ If the planner displays a storage or recovery warning, follow its guidance and k
 | Results do not reflect load edits | Click **Calculate** and correct highlighted inputs. |
 | Manual equipment values changed | **Calculate** regenerates both options. **Use generated values** resets only the selected option. |
 | Report shows the wrong option | Select the intended system option and generate the report again. |
+| A smaller unit has a higher price | Prices come from separate equipment references; compare their features and local quotations. Price is not proportional to capacity. |
 | Costs look wrong | Review unit prices, equipment quantities, currency, exchange rate, installation and contingency rates. |
 | Equipment is unresolved | Review failed and unverified checks; obtain a matching specification or quotation. |
 | A project is missing | Check the browser, device and site address used to create it. Clearing browser data may remove saved projects. |
