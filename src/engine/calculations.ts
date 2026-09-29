@@ -1,3 +1,4 @@
+import { loadFieldApplies } from "./fields";
 import type { Assumptions, CalculationResult, LoadCalculation, Project, StartupEvent, SystemSizing } from "../types/project";
 
 const safeNumber = (value: number, fallback = 0): number => Number.isFinite(value) ? value : fallback;
@@ -23,10 +24,10 @@ export function startupEvents(rows: LoadCalculation[], mode: Project["startupMod
   return [...groups.values()].map((group) => {
     const starting = new Set(group);
     const powers = active.map((row) => starting.has(row) ? row.surgeWatts : row.runningWatts);
-    const vas = active.map((row) => starting.has(row) && (row.load.surgeMultiplier > 1 || row.load.startupVA !== undefined)
+    const vas = active.map((row) => !loadFieldApplies(row.load.currentType, "powerFactor") ? undefined : starting.has(row) && (row.load.surgeMultiplier > 1 || (loadFieldApplies(row.load.currentType, "startupVA") && row.load.startupVA !== undefined))
       ? row.load.startupVA === undefined ? undefined : row.load.quantity * row.load.startupVA
       : row.load.powerFactor === undefined ? undefined : row.runningWatts / row.load.powerFactor);
-    const durations = group.filter((row) => row.load.surgeMultiplier > 1 || row.load.startupVA !== undefined).map((row) => row.load.startupSeconds);
+    const durations = group.filter((row) => row.load.surgeMultiplier > 1 || (loadFieldApplies(row.load.currentType, "startupVA") && row.load.startupVA !== undefined)).map((row) => row.load.startupSeconds);
     return {
       watts: powers.reduce((a, b) => a + b, 0),
       voltAmps: vas.every((v) => v !== undefined) ? vas.reduce<number>((a, b) => a + b!, 0) : undefined,

@@ -59,6 +59,8 @@ Open **Advanced** on a load to enter:
 - Supported minimum and maximum supply voltage
 - Startup group name
 
+Power factor, startup VA and AC frequency appear only for AC appliances. Startup duration, supply-voltage range and startup group are available for both AC and DC. Switching type updates the fields immediately, preserves your voltage and previous entries, and waits for **Calculate** to update results. Inactive AC details are ignored for DC loads and omitted from their report details.
+
 Enter these values only when you have supporting measurements or specifications. Watts and VA describe different limits; one should not be substituted for the other.
 
 By default, one row starts while the other active loads keep running. Rows with the same startup group name start together. You can also select **all active loads restart together** in the advanced equipment settings.

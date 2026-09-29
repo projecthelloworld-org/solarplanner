@@ -9,7 +9,7 @@ The planner compares two options:
 
 Each option has its own equipment, prices and checks. Your appliance values remain the basis of the estimate.
 
-Current release: **v1.3.0**. Read the [release notes](docs/RELEASE_NOTES_v1.3.0.md) for changes and existing-project guidance.
+Current release: **v1.3.1**. Read the [release notes](docs/RELEASE_NOTES_v1.3.1.md) for changes and existing-project guidance.
 
 ## Get Started
 

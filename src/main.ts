@@ -4,7 +4,7 @@ import brandProfilesData from "./data/brand-profiles.json";
 import sampleProjectData from "./data/sample-project.json";
 import { loadAppState, normalizeProject, saveAppState } from "./app/persistence";
 import { renderAdvancedSettings, renderLoadAdvanced } from "./app/advanced";
-import { loadAdvancedFields } from "./engine/fields";
+import { loadAdvancedFields, loadFieldApplies } from "./engine/fields";
 import { engineeringFor } from "./engine/engineering";
 import { inverterDescription, requiredControllerAmps, supplementaryControllers } from "./engine/equipment";
 import productsData from "./data/default-products.json";
@@ -706,6 +706,16 @@ function bindEvents() {
       field.setAttribute("aria-label", `${field.getAttribute("aria-label") ?? field.dataset.loadField}, row ${index + 1}`);
       const stage = () => {
         loadDrafts.set(activeProject().id, collectLoadTable(activeProject()));
+        if (field.dataset.loadField === "currentType") {
+          const type = (field as HTMLSelectElement).value === "AC" ? "AC" : "DC";
+          row.querySelectorAll<HTMLElement>("[data-advanced-load-field]").forEach((label) => {
+            const applies = loadFieldApplies(type, label.dataset.advancedLoadField!);
+            label.hidden = !applies;
+            const input = label.querySelector<HTMLInputElement>("input")!;
+            input.disabled = !applies;
+            if (!applies) { input.setCustomValidity(""); input.removeAttribute("aria-invalid"); input.removeAttribute("aria-describedby"); }
+          });
+        }
         field.removeAttribute("aria-invalid");
         field.removeAttribute("aria-describedby");
         updatePendingState();
