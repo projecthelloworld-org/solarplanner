@@ -4,6 +4,12 @@ on:
   push:
     branches: [master, phw]
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing release tag (vX.Y.Z or vX.Y.Z-phw)"
+        required: true
+        type: string
   pull_request:
     branches: [master, phw]
 
@@ -13,9 +19,35 @@ permissions:
 jobs:
   application:
     runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.release.outputs.sha }}
+      tag: ${{ steps.release.outputs.tag }}
     steps:
+      - name: Validate requested tag
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
+        run: |
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-phw)?$ ]] || { echo "Invalid release tag"; exit 1; }
+
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.release_tag) || github.ref }}
+          persist-credentials: false
+
+      - name: Validate release metadata
+        id: release
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
+        run: |
+          version="${RELEASE_TAG#v}"
+          version="${version%-phw}"
+          test "$(node -p "require('./package.json').version")" = "$version"
+          test -s "docs/RELEASE_NOTES_v${version}.md"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -31,3 +63,38 @@ jobs:
 
       - name: Build deployment image
         run: docker build -t hello-solar-planner:${{ github.sha }} .
+
+  release:
+    name: Publish release notes
+    needs: application
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: release-${{ needs.application.outputs.tag }}
+      cancel-in-progress: false
+    steps:
+      - name: Check out verified release
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.application.outputs.sha }}
+          persist-credentials: false
+
+      - name: Publish missing release page
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.application.outputs.tag }}
+        run: |
+          version="${RELEASE_TAG#v}"
+          version="${version%-phw}"
+          notes="docs/RELEASE_NOTES_v${version}.md"
+          test -s "$notes"
+          if gh release view "$RELEASE_TAG" --json url --jq .url; then
+            echo "Release already exists; leaving its notes unchanged."
+          else
+            gh release create "$RELEASE_TAG" --verify-tag \
+              --title "Hello Solar Planner $RELEASE_TAG" \
+              --notes-file "$notes" --latest=false
+          fi
