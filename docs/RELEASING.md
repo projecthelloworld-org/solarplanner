@@ -57,7 +57,14 @@ git push --atomic <remote> master phw refs/tags/vX.Y.Z refs/tags/vX.Y.Z-phw
 ```
 
 11. Verify remote branch and tag targets. Never force-update an existing release tag.
-12. Publish release notes on the Project Hello World Gitea repository and GitHub. If hosting permissions block a release page, report the limitation separately from successful branch/tag pushes. Do not bypass organization access restrictions.
+12. GitHub's Verify workflow publishes the matching release notes after tag verification, tests, production build and Docker build pass. Only its release job has repository-content write permission. Existing release pages are left unchanged; tags are never created or moved by the job. Releases are not automatically promoted to Latest, so publishing an older or hosted tag cannot displace the current standalone release.
+13. Publish the same notes on the Project Hello World Gitea repository separately. This GitHub job does not publish to Gitea. If hosting permissions block a release page, report the limitation separately from successful branch/tag pushes. Do not bypass organization access restrictions.
+
+### Publish notes for an existing GitHub tag
+
+Open **Actions → Verify → Run workflow**, select `master` (or `phw`) containing the current workflow, and enter the existing tag, such as `v1.4.0` or `v1.4.0-phw`. Run once per tag. The workflow checks out and verifies that tag's exact commit, checks its package version and matching `docs/RELEASE_NOTES_vX.Y.Z.md`, and then publishes the page. Missing tags, notes or mismatched versions fail without publication.
+
+The repository must permit GitHub Actions to use `contents: write` for release publication. Manual dispatch requires repository write access. This uses the repository's Actions token; it does not require a personal token or the local OAuth connection.
 
 ## Hotfixes
 
