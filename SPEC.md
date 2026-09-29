@@ -1,4 +1,4 @@
-> Technical reference for contributors and reviewers. For planner guidance, see the [user manual](USER_MANUAL.md) and [calculation guide](docs/CALCULATIONS.md). Calculation revision 2.0; storage schema 2. [Validation cases](docs/maintainers/CALCULATION_VALIDATION.md) are maintained separately.
+> Technical reference for contributors and reviewers. For planner guidance, see the [user manual](USER_MANUAL.md) and [calculation guide](docs/CALCULATIONS.md). Calculation revision 2.1; storage schema 2. [Validation cases](docs/maintainers/CALCULATION_VALIDATION.md) are maintained separately.
 
 # Hello Solar Planner v1 Specification
 
@@ -236,15 +236,25 @@ The Fully DC option does not require an inverter. A Hybrid project with no AC lo
 
 Generated values use calculated requirements, voltage-compatible product IDs, and editable unit-size preferences:
 
-- panel candidates at or below the configured largest unit are compared by installed cost; a lower component count wins when its equipment cost is within 30% of the cheapest candidate
+- panel candidates are at or below the configured largest unit; each candidate uses the minimum whole-panel quantity meeting the unrounded requirement
 - battery candidates must form native-voltage banks or explicitly approved series strings, within documented parallel limits; unknown limits permit only a single native-voltage unit. Known continuous discharge limits also affect quantity. The saved V x Ah preference is used when feasible; a larger compatible class is allowed when necessary
 - controllers must support the project voltage; quantity covers both current and documented PV input power. Preferred controller amps are used when compatible; 48 V can use the documented 60 A class even if an older preference is smaller
-- one compatible Hybrid inverter is selected by combined inverter/controller cost; included MPPT contributes once, and separate controllers cover the remaining current and PV power. A missing product remains unresolved, with zero generated quantity and an incomplete-estimate warning
+- one compatible Hybrid inverter is selected as part of the complete equipment combination; included MPPT contributes once, and separate controllers cover the remaining current and PV power. A missing product remains unresolved, with zero generated quantity and an incomplete-estimate warning
 - monitoring is not automatically added to a single light-load group; it remains editable and is included for multi-load or larger generated plans
+
+Complete combinations are compared using equipment subtotal in USD, including accessories and retained price overrides, before installation and contingency. Each inverter candidate has its own efficiency-based demand. Within the inclusive 10% window above the cheapest eligible subtotal, minimize:
+
+```text
+max(0, installed solar W / required solar W - 1)
++ max(0, installed nominal battery Wh / required nominal battery Wh - 1)
++ max(0, installed controller A / installed-array required A - 1)
+```
+
+A term with zero requirement contributes zero. Ties use lower equipment subtotal, fewer units, then stable catalogue-reference order. Preferred battery unit size, controller size and manageable parallel-string filters are applied before ranking. Known failed engineering checks exclude complete candidates; missing specifications remain unverified. If no complete combination remains, the interface explicitly describes the provisional estimate as incomplete. Quantities use one reference per equipment category; mixed types are not modeled.
 
 For bank topology, 12.8/25.6/51.2 V LiFePO4 maps to 12/24/48 V. The project selector offers those three nominal classes; older custom voltages remain readable with a review warning. Arithmetic series ratios alone do not approve wiring. Unknown BMS limits, incompatible edited ratings and missing product identities require attention. Empty projects generate no equipment quantities.
 
-Equipment plans persist product IDs for panels, batteries, DC/Hybrid controllers and inverters. Specifications resolve from the authoritative JSON catalogue, never from imported user-supplied metadata. Edited capacities invalidate their selected identity. Product selectors apply the named reference's capacity and base price, clearing that item's price override. Calculate regenerates both options while retaining quotations, with review warnings when equipment identities change or are unknown. DC and Hybrid controllers have independent references, quantities and prices. The optional hybridControllerUnitUsd defaults to the legacy controller price when absent. Selecting a compatible single inverter recalculates its supplementary controller quantity; subsequent manual quantity edits remain possible. Battery/inverter source notes identify comparable pricing and revision uncertainty. Catalogue records include optional supported voltages, current/connection/PV limits, inverter type, MPPT capacity and price evidence. Legacy missing fields remain unverified rather than being silently inferred.
+Equipment plans persist product IDs for panels, batteries, DC/Hybrid controllers and inverters. Reference specifications resolve from the catalogue; explicit project rating overrides are handled separately. Representative size estimates do not inherit manufacturer limits from the product used for price evidence. Edited capacities invalidate their selected identity. Panel, battery, controller and inverter selectors apply the selected reference's capacity and base price, clearing that item's price override. Calculate regenerates both options while retaining quotations, with review warnings when equipment identities change or are unknown. DC and Hybrid controllers have independent references, quantities and prices. The optional hybridControllerUnitUsd defaults to the legacy controller price when absent. Selecting a compatible single inverter recalculates its supplementary controller quantity; subsequent manual quantity edits remain possible. Battery/inverter source notes identify comparable pricing and revision uncertainty. Catalogue records include optional supported voltages, current/connection/PV limits, inverter type, MPPT capacity and price evidence. Legacy missing fields remain unverified rather than being silently inferred.
 
 Solar and battery equipment, costs, checks, custom edits and price overrides are independent for Fully DC and Hybrid. Selection uses each option's own requirement. Catalogue choice is a transparent budgeting heuristic, not a supplier recommendation or component compatibility approval.
 
@@ -263,6 +273,8 @@ The side panel keeps equipment quantities, capacities, and prices together in ac
 - Earthing
 - Monitoring
 - Sizing Assumptions
+
+Each option card identifies generated or manually edited equipment, explains selection and exposes expandable capacity and cost breakdowns. Price basis is Named product reference, Representative size estimate, User quotation or Unverified allowance; comparable-class evidence is labelled representative even where electrical specifications identify a named product.
 
 Currency is folded by default. Solar Panels is open by default. Prices are entered as USD base unit prices, and totals are displayed in the selected project currency using the manual exchange rate.
 
@@ -287,6 +299,8 @@ If one or more values are below recommendation, the option shows **Needs attenti
 Solar array is 900 W; recommendation is 1,000 W.
 Battery storage is 2.56 kWh; recommendation is 3.20 kWh.
 ```
+
+Unverified checks are displayed in a closed disclosure labelled with their count. Failed checks and overall status remain visible. Empty unverified sections are omitted; All equipment checks provides the complete list.
 
 Users can still print or export reports when a plan needs attention. The report and CSV preserve the edited equipment and warnings.
 
@@ -338,6 +352,9 @@ The printable/PDF report includes only the selected System Option:
 - Financial Summary
 - Assumptions
 - Safety Disclaimer
+- Calculation record and effective assumptions
+- Exact sizing, capacity fit, storage performance and selection explanation
+- Price basis, specification sources, advanced inputs and equipment-check evidence
 
 Printing uses the browser print flow, so the user can print or save as PDF.
 
@@ -345,7 +362,7 @@ Printing uses the browser print flow, so the user can print or save as PDF.
 
 The CSV export mirrors the core tabular/report detail for the selected System Option.
 
-The CSV includes only:
+The CSV includes:
 
 - Project Summary
 - Load Table
@@ -353,6 +370,10 @@ The CSV includes only:
 - Generated / Edited Equipment Plan
 - Selected system recommendation with status and warnings
 - Financial Summary and cost detail
+- Effective assumptions, calculation revision and generation date
+- Exact sizing, installed capacity, margins and excess percentages
+- Selection explanation, price basis, specification references and advanced inputs
+- Passed, failed and unverified checks with evidence
 
 The CSV export is intended to be opened in spreadsheet software for further review and editing.
 
@@ -377,8 +398,8 @@ Editable defaults live in `src/data`:
 
 ## Assumptions And Limitations
 
-- Solar and battery equipment are shared across Fully DC and Hybrid options.
-- Controllers and inverter values are option-specific.
+- Equipment, engineering settings and quotations are independent for Fully DC and Hybrid.
+- Sizing assumptions remain shared across projects in the same browser.
 - Calculate regenerates both options; **Use generated values** resets only the selected option.
 - Load-table edits are applied when the user clicks **Calculate**.
 - Exchange rates are manually entered; there is no live currency lookup.

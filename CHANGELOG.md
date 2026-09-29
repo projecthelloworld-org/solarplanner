@@ -10,6 +10,7 @@ The project follows [Semantic Versioning](https://semver.org/). Release tags use
 - Compare complete equipment combinations using a 10% cost window and combined capacity fit.
 - Show required, installed and excess capacities with consistent price classifications in reports.
 - Collapse unverified equipment checks by default.
+- Clarify price labels, capacity fit, percentage allowances and report guidance in the documentation.
 
 ## 1.3.2 - 2026-09-29
 

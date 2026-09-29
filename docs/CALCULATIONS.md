@@ -25,9 +25,19 @@ Short-term inverter capacity is credited only when W, VA and duration cover the 
 
 ## Independent equipment plans
 
-DC and hybrid each have generated or edited equipment and independent price overrides. Calculate regenerates both options; quantity edits update costs immediately. Selecting another named product applies its reference price. Retained quotations are flagged when their equipment changes or their original reference is unknown. Each hybrid inverter is assessed using its own efficiency and the resulting cost of panels, batteries, controllers and accessories. Each combination uses one panel type, one battery type and one separate controller type, at the minimum quantities needed for the modeled requirements. Mixed equipment types are not modeled. Eligible panel, battery and controller combinations are compared together, including accessories and each candidate inverter. Among combinations within 10% of the lowest equipment subtotal, selection minimizes the sum of proportional excess solar watts, nominal battery Wh and controller output amps. Controller excess is measured against the requirement for each installed array. Ties prefer lower equipment cost, fewer units, then stable reference order. Existing reserves are applied before selection. The 10% selection window is separate from the optional ±10% budgeting assumption and does not add a charge.
+DC and Hybrid keep independent equipment and quotations. **Calculate** regenerates both options. **Use generated values** resets only the selected option. Quantity edits change costs immediately; choosing a different reference applies its price. Retained quotations need review when the equipment changes.
 
-Existing preferred unit sizes and the preference for at most four parallel battery strings remain in effect; unknown series/parallel permissions are never assumed. Candidates with known failed engineering checks are excluded. If no complete compatible combination remains, unresolved storage is shown explicitly and the estimate remains incomplete. Missing specifications may support a provisional estimate with unverified checks.
+### Balanced equipment selection
+
+The planner compares complete combinations of panels, batteries, controllers and, when needed, an inverter. Supporting equipment allowances are included in the cost comparison. Each inverter uses its own effective efficiency when calculating energy and equipment requirements.
+
+Among eligible combinations within 10% of the lowest equipment subtotal, the planner chooses the closest combined fit for solar watts, nominal battery energy and controller output current. Each capacity is compared with its own requirement as a proportion, so different units can be considered together. Controller requirements follow the installed array. All configured reserves are already included.
+
+This rule can choose a slightly more expensive plan or a larger array if it gives a better combined fit. It does not guarantee the smallest individual component or the fewest units. The 10% selection window adds no charge and is separate from the optional ±10% budgeting range and contingency.
+
+Each combination uses one panel type, one battery type and one separate controller type, at the quantities needed for the modeled requirements. Mixed equipment types are not modeled. Unit-size preferences and the preference for at most four parallel battery strings remain in effect. Unknown series or parallel permissions are not assumed.
+
+Known incompatibilities exclude a combination. Missing specifications may support a provisional estimate with unverified checks. If no complete compatible combination is available, the plan identifies unresolved equipment and an incomplete estimate. Open **Required and installed capacity** to compare the selected equipment with the calculated demand.
 
 Battery counts cover energy and documented running/starting/charging limits. Native-voltage units or documented complete series strings are required; parallel approval is not invented. Current screening uses documented minimum operating voltage where available. Nominal-voltage screening cannot establish a pass without that minimum. Continuous operating ratings, timed maxima and BMS trip thresholds are distinct concepts.
 
@@ -47,4 +57,4 @@ Both PDF and CSV include calculation revision/date, effective assumptions, preci
 
 Hourly dispatch, weather forecasts, guaranteed recovery after cloudy days, cable/protection sizing, structural design and installation certification remain outside the model.
 
-Calculation revision 2.1 identifies the expanded catalogue and complete-combination balanced selection. Saved custom plans and quotations are retained; generated recommendations and totals may change.
+Reports identify the calculation revision used. Changes to equipment references or selection rules can change generated recommendations and totals; saved custom equipment and quotations are retained.

@@ -9,7 +9,7 @@ The planner compares two options:
 
 Each option has its own equipment, prices and checks. Your appliance values remain the basis of the estimate.
 
-Current release: **v1.3.2**. Read the [release notes](docs/RELEASE_NOTES_v1.3.2.md) for changes and existing-project guidance.
+Latest published release: **v1.3.2**. Read the [release notes](docs/RELEASE_NOTES_v1.3.2.md) for changes and existing-project guidance. Upcoming changes are listed in the [changelog](CHANGELOG.md#unreleased).
 
 ## Get Started
 
@@ -30,9 +30,13 @@ See the [user manual](USER_MANUAL.md) for detailed instructions.
 - Battery storage, usable energy and estimated autonomy
 - Solar array, charge controller and inverter requirements
 - Independent equipment and cost estimates for both system options
+- Selectable panel, battery and controller sizes with reference prices
+- Required, installed and excess capacity for reviewing equipment fit
 - Optional startup, battery and PV details under advanced settings
 - Equipment checks marked **passed**, **failed** or **unverified**
 - Reports with assumptions, specification sources, costs and unresolved checks
+
+Generated plans compare complete equipment costs and favor closer combined capacity fit within 10% of the cheapest eligible combination. Existing safety margins remain included. This selection rule adds no percentage charge.
 
 A plan remains exportable when equipment information is incomplete. **Needs attention** identifies a failed check or missing information that requires review.
 
@@ -60,6 +64,6 @@ PDF and CSV exports provide portable records of a plan; they cannot currently be
 
 Hello Solar Planner is an open-source project by Project Hello World, available under the [MIT License](LICENSE).
 
-For development or hosting, use the [contributor guide](CONTRIBUTING.md), [deployment guide](docs/DEPLOYMENT.md). Implementation, validation and maintenance records are listed in the [maintainer documentation](docs/maintainers/README.md).
+For development or hosting, use the [contributor guide](CONTRIBUTING.md) and [deployment guide](docs/DEPLOYMENT.md). Implementation, validation and maintenance records are listed in the [maintainer documentation](docs/maintainers/README.md).
 
 See the [Code of Conduct](CODE_OF_CONDUCT.md) when participating and the [security policy](SECURITY.md) to report a vulnerability.
