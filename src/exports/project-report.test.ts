@@ -33,7 +33,7 @@ describe("project report exports", () => {
     const csv = buildProjectCsv(project, assumptionsData, brandProfilesData);
     const html = renderProjectReport(project, assumptionsData, brandProfilesData);
     for (const exportText of [csv, html]) {
-      expect(exportText).toContain("470 A");
+      expect(exportText).toContain("468.75 A");
       expect(exportText).toContain("123.45");
       expect(exportText).toContain("Needs attention");
       expect(exportText).toContain("idle consumption");

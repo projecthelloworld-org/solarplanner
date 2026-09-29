@@ -98,3 +98,67 @@ describe("project persistence", () => {
     expect(JSON.parse(storage.getItem(STORAGE_KEY) ?? "{}").schemaVersion).toBe(STORAGE_SCHEMA_VERSION);
   });
 });
+
+describe("schema v2 accuracy migration", () => {
+  it("backs up v1 and switches only default efficiency to manufacturer mode", () => {
+    const storage = new MemoryStorage();
+    const original = JSON.stringify({ schemaVersion: 1, activeProjectId: sampleProjectData.id, projects: [sampleProjectData], assumptions: { inverterEfficiency: .88 } });
+    storage.setItem(STORAGE_KEY, original);
+    const loaded = loadAppState(storage);
+    expect(storage.getItem(`${STORAGE_KEY}-migration-v1`)).toBe(original);
+    expect(loaded.state.projects[0].inverterSettings?.mode).toBe("manufacturer");
+    expect(loaded.notice).toContain("Generated recommendations may change");
+    expect(saveAppState(loaded.state, storage)).toBe("");
+    const second = loadAppState(storage);
+    expect(second.notice).toBe("");
+    expect(second.state.projects).toEqual(loaded.state.projects);
+    expect(storage.getItem(`${STORAGE_KEY}-migration-v1`)).toBe(original);
+  });
+  it("preserves non-default efficiency, old custom plans and quotations in both options", async () => {
+    const { getProjectBundle } = await import("../engine/planner");
+    const { default: assumptions } = await import("../data/assumptions.json");
+    const project = structuredClone(sampleProjectData) as Project;
+    project.equipmentPlanMode = "custom";
+    project.equipmentPlan = getProjectBundle({ ...project, equipmentPlanMode: "generated" }, assumptions).plan;
+    project.pricing.panelUnitUsd = 123.45;
+    project.pricing.hybridControllerUnitUsd = 125;
+    const storage = new MemoryStorage();
+    storage.setItem(STORAGE_KEY, JSON.stringify({ schemaVersion: 1, projects: [project], assumptions: { inverterEfficiency: .91 } }));
+    const restored = loadAppState(storage).state.projects[0];
+    expect(restored.inverterSettings).toMatchObject({ mode: "manual", efficiency: .91 });
+    for (const id of ["dc", "hybrid"] as const) {
+      expect(restored.optionPlans?.[id]?.mode).toBe("custom");
+      expect(restored.optionPlans?.[id]?.equipment).toEqual(project.equipmentPlan);
+      expect(restored.optionPlans?.[id]?.pricingOverrides).toMatchObject({ panelUnitUsd: 123.45, hybridControllerUnitUsd: 125 });
+    }
+    restored.optionPlans!.dc!.equipment!.shared.panelCount = 77;
+    expect(restored.optionPlans!.hybrid!.equipment!.shared.panelCount).not.toBe(77);
+  });
+  it("does not overwrite the original when the migration backup cannot be stored", () => {
+    class BackupDenied extends MemoryStorage {
+      override setItem(key: string, value: string) { if (key.endsWith("migration-v1")) throw new Error("quota"); super.setItem(key, value); }
+    }
+    const storage = new BackupDenied();
+    const original = JSON.stringify({ schemaVersion: 1, projects: [sampleProjectData] });
+    storage.setItem(STORAGE_KEY, original);
+    const loaded = loadAppState(storage);
+    expect(loaded.state.pendingMigrationBackup).toBe(original);
+    expect(saveAppState(loaded.state, storage)).toContain("could not save");
+    expect(storage.getItem(STORAGE_KEY)).toBe(original);
+  });
+  it("round-trips optional inputs without replacing missing values with zero", () => {
+    const project = normalizeProject(sampleProjectData as Project);
+    project.loads[0].powerFactor = .8;
+    project.loads[0].startupSeconds = 3;
+    project.loads[0].startupGroup = "network";
+    project.inverterSettings = { mode: "manufacturer", unloadedHoursPerDay: 0 };
+    project.optionPlans!.hybrid!.engineering = { panel: { voc: 45 }, minimumCellTemperatureC: 0, pvAssignments: [{ target: "separate", controllerIndex: 1, input: 1, series: 2, parallel: 1 }] };
+    const restored = normalizeProject(JSON.parse(JSON.stringify(project)));
+    expect(restored.loads[0]).toMatchObject({ powerFactor: .8, startupSeconds: 3, startupGroup: "network" });
+    expect(restored.loads[0].startupVA).toBeUndefined();
+    expect(restored.inverterSettings?.unloadedHoursPerDay).toBe(0);
+    expect(restored.optionPlans!.hybrid!.engineering?.minimumCellTemperatureC).toBe(0);
+    expect(restored.optionPlans!.hybrid!.engineering?.panel?.voc).toBe(45);
+    expect(restored.optionPlans!.hybrid!.engineering?.panel?.isc).toBeUndefined();
+  });
+});

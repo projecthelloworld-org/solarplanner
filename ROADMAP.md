@@ -14,14 +14,14 @@ This roadmap describes the public direction of Hello Solar Planner. It is a guid
 
 ### Calculation Confidence
 
-- Expand regression fixtures for representative community-network systems and edge cases.
+- Validate a wider range of community-network systems, including unusually small or large loads.
 - Compare planner outputs with reviewed supplier quotations and completed installations.
 - Document the limits of daily-energy modeling, surge assumptions, battery current, PV string design, and recovery after poor weather.
-- Keep calculation and equipment-selection changes traceable through tests, examples, and source notes.
+- Make the assumptions and specification evidence behind recommendations easier to review.
 
 ### Accessibility And Browser Reliability
 
-- Add maintained browser workflow tests for calculation, equipment editing, report generation, CSV export, printing, and persistence.
+- Improve reliability across browsers when calculating, editing equipment, saving projects and exporting reports.
 - Conduct screen-reader and keyboard testing with users.
 - Continue checking narrow screens, high zoom, reduced motion, and print output.
 
@@ -36,8 +36,8 @@ This roadmap describes the public direction of Hello Solar Planner. It is a guid
 
 ### Project Portability
 
-- Add versioned project JSON export and import.
-- Validate imported data and provide migration paths for older project files.
+- Export and import editable project files.
+- Keep older project files usable when the planner is updated.
 - Support reusable project templates without requiring a server.
 
 ### Regional Adaptation
@@ -45,12 +45,6 @@ This roadmap describes the public direction of Hello Solar Planner. It is a guid
 - Add Kenya, Uganda, and custom pricing profiles with dated source metadata.
 - Support localization of interface and report text.
 - Make project-specific assumptions and price snapshots portable with the project.
-
-### Maintainability
-
-- Continue separating interface rendering and browser event handling into focused modules.
-- Keep calculation, equipment, costing, report, and persistence logic independently testable.
-- Add dependency-update and deployment-image verification to the public maintenance workflow.
 
 ## Longer-Term Possibilities
 

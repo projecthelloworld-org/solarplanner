@@ -33,7 +33,7 @@ describe("equipment capacity checks", () => {
     const demand = calculateProject({ ...project, loads: [project.loads[0]] }, assumptions);
     const quoted = { ...project, pricing: { ...project.pricing, controllerUnitUsd: 120 } };
     expect(evaluateEquipmentPlan(demand, plan, "dc", quoted, assumptions).status).toBe("Needs attention");
-    expect(evaluateEquipmentPlan(demand, plan, "dc", quoted, assumptions).warnings.join(" ")).toContain("unverified");
+    expect(evaluateEquipmentPlan(demand, plan, "dc", quoted, assumptions).unverified?.join(" ")).toContain("unverified");
     const undersized = structuredClone(plan);
     undersized.shared.panelCount = 1;
     expect(evaluateEquipmentPlan(result, undersized, "dc", project, assumptions).status).toBe("Needs attention");
@@ -46,7 +46,7 @@ describe("equipment capacity checks", () => {
     generated.shared.panelCount = 20;
     const evaluation = evaluateEquipmentPlan(demand, generated, "hybrid", project, assumptions);
     expect(evaluation.warnings.some((warning) => warning.startsWith("MPPT/controller"))).toBe(true);
-    expect(evaluation.checks[2].required).toBe(470);
+    expect(evaluation.checks[2].required).toBe(468.75);
   });
 
   it("uses complete battery strings and flags incompatible edited banks", () => {
@@ -66,7 +66,7 @@ describe("equipment capacity checks", () => {
     const generated = generateEquipmentPlan(demand, project.equipmentDefaults, project, assumptions);
     expect(generated.hybrid.inverterCount).toBe(0);
     expect(generated.hybrid.inverterWatts).toBe(0);
-    expect(evaluateEquipmentPlan(demand, generated, "hybrid", project, assumptions).warnings.join(" ")).toContain("matching quote");
+    expect(evaluateEquipmentPlan(demand, generated, "hybrid", project, assumptions).unverified?.join(" ")).toContain("matching quote");
     generated.hybrid.inverterCount = 3;
     expect(evaluateEquipmentPlan(demand, generated, "hybrid", project, assumptions).warnings.join(" ")).toContain("parallel operation");
   });
@@ -96,7 +96,7 @@ describe("equipment capacity checks", () => {
     expect(generated.shared).toMatchObject({ panelCount: 1, panelWatts: 200, batteryCount: 1, batteryVoltage: 25.6, batteryAh: 50 });
     expect(generated.dc).toMatchObject({ controllerCount: 1, mpptAmps: 20 });
     expect(generated.balance.monitoringCount).toBe(0);
-    expect(evaluateEquipmentPlan(demand, generated, "dc", small, assumptions).status).toBe("Preliminary checks met");
+    expect(evaluateEquipmentPlan(demand, generated, "dc", small, assumptions).unverified?.join(" ")).toContain("Minimum operating voltage");
   });
 
   it("keeps the larger practical equipment classes for the full sample", () => {
@@ -106,6 +106,6 @@ describe("equipment capacity checks", () => {
     expect(generated.shared.batteryVoltage).toBe(25.6);
     expect(generated.shared.batteryAh).toBe(100);
     expect(generated.dc.mpptAmps).toBe(60);
-    expect(generated.hybrid.inverterWatts).toBe(300);
+    expect(generated.hybrid.inverterWatts).toBe(0); // DC plan does not buy a hybrid inverter.
   });
 });

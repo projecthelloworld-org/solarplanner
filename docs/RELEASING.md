@@ -24,7 +24,7 @@ Examples:
 - `master`: reusable open-source product and source of release tags
 - short-lived feature/fix branches: reviewed changes before merge
 
-Organization-specific deployment branches are not release sources. Reusable changes should land on `master` before a release is tagged.
+Reusable releases are tagged on `master`. After incorporating that release into `phw`, tag the hosted variant as `vX.Y.Z-phw`. The hosted tag identifies its landing page and `/solar/` deployment layout; it does not replace the standalone release tag.
 
 ## Release Checklist
 

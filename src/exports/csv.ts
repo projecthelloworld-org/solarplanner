@@ -4,7 +4,7 @@ const spreadsheetFormulaPrefix = /^[\t\r\n ]*[=+\-@]/;
 
 export function csvCell(value: CsvValue): string {
   let text = value === undefined ? "" : String(value);
-  if (spreadsheetFormulaPrefix.test(text)) text = `'${text}`;
+  if (typeof value !== "number" && spreadsheetFormulaPrefix.test(text)) text = `'${text}`;
   return `"${text.replace(/"/g, '""')}"`;
 }
 

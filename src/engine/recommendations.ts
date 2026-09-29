@@ -1,6 +1,7 @@
 import type { CalculationResult, Project, SystemRecommendation, EquipmentEvaluation } from "../types/project";
 
-const formatKwh = (wh: number): string => `${(wh / 1000).toFixed(1)} kWh`;
+import { decimalFormat, formatEnergy } from "../utils/format";
+const formatKwh = formatEnergy;
 
 export function buildRecommendations(project: Project, result: CalculationResult, dcEvaluation: EquipmentEvaluation): SystemRecommendation[] {
   const acLoadCount = project.loads.filter((load) => load.currentType === "AC").length;
@@ -27,12 +28,12 @@ export function buildRecommendations(project: Project, result: CalculationResult
         },
         {
           category: "Solar array",
-          recommendation: `${result.dc.recommendedSolarArrayW.toLocaleString()} W PV array`,
+          recommendation: `${decimalFormat.format(result.dc.recommendedSolarArrayW)} W PV array`,
           rationale: `Based on ${project.sunHours} peak sun hour(s) with derating. Use a low-sun-season estimate; extra autonomy does not automatically size rapid recovery after cloudy days.`,
         },
         {
           category: "Charge control",
-          recommendation: `${dcEvaluation.checks.find((check) => check.label === "MPPT/controller")!.required} A MPPT at ${project.systemVoltage} V`,
+          recommendation: `${decimalFormat.format(dcEvaluation.checks.find((check) => check.label === "MPPT/controller")!.required)} A MPPT at ${project.systemVoltage} V`,
           rationale: "Controller current covers demand or the installed array, whichever is larger, with the configured headroom.",
         },
       ],
@@ -40,7 +41,7 @@ export function buildRecommendations(project: Project, result: CalculationResult
     {
       id: "hybrid",
       name: "Hybrid DC + AC System",
-      summary: "Keeps efficient DC supply for network loads while adding AC capacity for devices that cannot move to DC.",
+      summary: result.acPeakLoadW === 0 ? "The entered loads use DC supply; no inverter is required for appliance demand." : result.peakLoadW === result.acPeakLoadW ? "Supplies the entered AC loads through an inverter. No direct DC appliance loads are listed." : "Supplies DC loads directly and AC loads through the selected inverter.",
       lines: [
         {
           category: "Energy target",
@@ -54,13 +55,13 @@ export function buildRecommendations(project: Project, result: CalculationResult
         },
         {
           category: "Solar array",
-          recommendation: `${result.hybrid.recommendedSolarArrayW.toLocaleString()} W PV array`,
+          recommendation: `${decimalFormat.format(result.hybrid.recommendedSolarArrayW)} W PV array`,
           rationale: `Based on ${project.sunHours} peak sun hour(s) and array derating. Covers daily energy plus reserve, not a guaranteed battery recharge time after cloudy days.`,
         },
         {
           category: "Inverter",
-          recommendation: `${result.hybrid.recommendedInverterW.toLocaleString()} W inverter or hybrid inverter`,
-          rationale: "Allows headroom above the running and expected surge load.",
+          recommendation: `${decimalFormat.format(result.hybrid.recommendedInverterW)} W inverter or hybrid inverter`,
+          rationale: "Conservative watt target shown; equipment checks assess continuous W/VA and verified startup magnitude/duration separately.",
         },
       ],
     },

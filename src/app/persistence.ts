@@ -1,8 +1,9 @@
 import assumptionsData from "../data/assumptions.json";
 import productsData from "../data/default-products.json";
 import sampleProjectData from "../data/sample-project.json";
-import { validateAssumptions } from "../engine/validation";
-import type { Assumptions, EquipmentDefaults, PricingSettings, ProductCatalog, Project } from "../types/project";
+import { loadAdvancedFields, ratingFields } from "../engine/fields";
+import { validateAssumptions, validateEngineering } from "../engine/validation";
+import type { Assumptions, EngineeringSettings, EquipmentDefaults, OptionPlanState, PricingSettings, ProductCatalog, Project } from "../types/project";
 import { clone, uid } from "../utils/html";
 
 export interface AppState {
@@ -11,6 +12,7 @@ export interface AppState {
   projects: Project[];
   assumptions: Assumptions;
   products: ProductCatalog;
+  pendingMigrationBackup?: string;
 }
 
 export interface LoadStateResult {
@@ -20,7 +22,8 @@ export interface LoadStateResult {
 
 export const STORAGE_KEY = "hello-solar-planner-state";
 export const RECOVERY_STORAGE_KEY = `${STORAGE_KEY}-recovery`;
-export const STORAGE_SCHEMA_VERSION = 1;
+export const STORAGE_SCHEMA_VERSION = 2;
+export const MIGRATION_BACKUP_KEY = `${STORAGE_KEY}-migration-v1`;
 
 const defaultProducts = productsData as ProductCatalog;
 const defaultAssumptions = assumptionsData as Assumptions;
@@ -142,14 +145,60 @@ function normalizeLoads(value: unknown, fallback: Project["loads"], systemVoltag
       voltage: boundedNumber(load.voltage, systemVoltage, 1, 1000),
       surgeMultiplier: boundedNumber(load.surgeMultiplier, 1, 1, 20),
       critical: load.critical === true,
+      ...Object.fromEntries(loadAdvancedFields.flatMap((field) => typeof load[field.key] === "number" && Number.isFinite(load[field.key]) && load[field.key]! >= field.min && load[field.key]! <= field.max ? [[field.key, load[field.key]]] : [])),
+      startupGroup: typeof load.startupGroup === "string" ? load.startupGroup.trim().slice(0, 100) || undefined : undefined,
     };
   });
+}
+
+function normalizeEngineering(raw?: EngineeringSettings): EngineeringSettings | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const settings: EngineeringSettings = {};
+  for (const group of ["battery", "inverter", "controller", "panel"] as const) {
+    settings[group] = Object.fromEntries(ratingFields[group].flatMap((field) => {
+      const value = raw[group]?.[field.key];
+      return typeof value === "number" && Number.isFinite(value) && value >= field.min && value <= field.max && (!field.integer || Number.isInteger(value)) ? [[field.key, value]] : [];
+    }));
+  }
+  for (const key of ["minimumCellTemperatureC", "maximumCellTemperatureC", "pvIscFactor"] as const) {
+    const value = raw[key];
+    if (typeof value === "number" && Number.isFinite(value)) settings[key] = value;
+  }
+  settings.pvAssignments = Array.isArray(raw.pvAssignments) ? raw.pvAssignments.filter((row) => row && (row.target === "separate" || row.target === "integrated") && [row.controllerIndex, row.input, row.series, row.parallel].every((v) => Number.isInteger(v) && v > 0 && v <= 100000)).map((row) => ({ target: row.target, controllerIndex: row.controllerIndex, input: row.input, series: row.series, parallel: row.parallel })) : undefined;
+  // Invalid cross-field combinations remain visible to validation; never invent a rating.
+  for (const issue of validateEngineering(settings)) {
+    if (!issue.path.includes(".")) delete (settings as Record<string, unknown>)[issue.path];
+  }
+  return settings;
 }
 
 export function normalizeProject(rawProject: Partial<Project>): Project {
   const fallback = clone(sampleProjectData) as Project;
   const project = { ...fallback, ...rawProject } as Project;
   const systemVoltage = boundedNumber(project.systemVoltage, fallback.systemVoltage, 12, 100);
+  const pricing = normalizePricing(project.pricing);
+  const legacyOverrides = project.equipmentPlanMode === "custom" || Object.keys(pricing).some((key) => pricing[key as keyof PricingSettings] !== defaultPricing[key as keyof PricingSettings]) ? pricing : {};
+  const optionPlans: Project["optionPlans"] = {};
+  for (const system of ["dc", "hybrid"] as const) {
+    const raw = rawProject.optionPlans?.[system];
+    const overrides: Partial<PricingSettings> = {};
+    for (const [key, value] of Object.entries(raw ? raw.pricingOverrides ?? {} : legacyOverrides)) {
+      if ((key in defaultPricing || key === "hybridControllerUnitUsd") && typeof value === "number" && Number.isFinite(value) && value >= 0) overrides[key as keyof PricingSettings] = toCents(value);
+    }
+    optionPlans[system] = {
+      mode: (raw?.mode ?? project.equipmentPlanMode) === "custom" ? "custom" : "generated",
+      equipment: normalizeEquipmentPlan(raw ? raw.equipment : project.equipmentPlan),
+      pricingOverrides: overrides,
+      engineering: normalizeEngineering(raw?.engineering),
+    };
+  }
+  const selected = optionPlans[project.selectedSystem === "hybrid" ? "hybrid" : "dc"]!;
+  const inverter = project.inverterSettings;
+  const inverterSettings: Project["inverterSettings"] = {
+    mode: inverter?.mode === "manual" ? "manual" : "manufacturer",
+    efficiency: inverter?.efficiency === undefined ? undefined : boundedNumber(inverter.efficiency, defaultAssumptions.inverterEfficiency, 0.01, 1),
+    unloadedHoursPerDay: inverter?.unloadedHoursPerDay === undefined ? undefined : boundedNumber(inverter.unloadedHoursPerDay, 0, 0, 24),
+  };
 
   return {
     ...project,
@@ -169,9 +218,12 @@ export function normalizeProject(rawProject: Partial<Project>): Project {
       mpptAmpStep: boundedNumber(project.equipmentDefaults?.mpptAmpStep, defaultEquipmentDefaults.mpptAmpStep, 1),
       inverterWattStep: boundedNumber(project.equipmentDefaults?.inverterWattStep, defaultEquipmentDefaults.inverterWattStep, 1),
     },
-    pricing: normalizePricing(project.pricing),
-    equipmentPlanMode: project.equipmentPlanMode ?? "generated",
-    equipmentPlan: normalizeEquipmentPlan(project.equipmentPlan),
+    pricing: { ...pricing, ...selected.pricingOverrides },
+    equipmentPlanMode: selected.mode,
+    equipmentPlan: selected.equipment,
+    optionPlans,
+    inverterSettings,
+    startupMode: project.startupMode === "all" ? "all" : "groups",
     loads: normalizeLoads(project.loads, fallback.loads, systemVoltage),
     updatedAt: project.updatedAt ?? new Date().toISOString(),
   };
@@ -197,7 +249,15 @@ export function loadAppState(storage: Storage | undefined): LoadStateResult {
 
     const parsed = JSON.parse(saved) as Partial<AppState>;
     const savedProjects = Array.isArray(parsed.projects) && parsed.projects.length > 0 ? parsed.projects : fallback.projects;
-    const projects = savedProjects.map((project) => normalizeProject(project));
+    const migrating = (parsed.schemaVersion ?? 1) < STORAGE_SCHEMA_VERSION;
+    let pendingMigrationBackup: string | undefined;
+    if (migrating && !storage.getItem(MIGRATION_BACKUP_KEY)) {
+      try { storage.setItem(MIGRATION_BACKUP_KEY, saved); } catch { pendingMigrationBackup = saved; }
+    }
+    const previousEfficiency = normalizeAssumptions(parsed.assumptions).inverterEfficiency;
+    const projects = savedProjects.map((project) => normalizeProject(migrating && !project.inverterSettings
+      ? { ...project, inverterSettings: previousEfficiency !== defaultAssumptions.inverterEfficiency ? { mode: "manual", efficiency: previousEfficiency } : { mode: "manufacturer" } }
+      : project));
     const activeProjectId = projects.some((project) => project.id === parsed.activeProjectId) ? parsed.activeProjectId! : projects[0].id;
     return {
       state: {
@@ -205,9 +265,10 @@ export function loadAppState(storage: Storage | undefined): LoadStateResult {
         activeProjectId,
         projects,
         assumptions: normalizeAssumptions(parsed.assumptions),
-        products: { ...defaultProducts, ...(parsed.products ?? {}) },
+        products: defaultProducts,
+        pendingMigrationBackup,
       },
-      notice: "",
+      notice: migrating ? "Saved projects upgraded: DC and hybrid plans are independent. Manufacturer efficiency replaces the old default; manual efficiency and quotations are preserved. Generated recommendations may change." + (pendingMigrationBackup ? " The original backup could not be written; saving is paused until it can be preserved." : "") : "",
     };
   } catch {
     let recoveryPreserved = false;
@@ -232,6 +293,10 @@ export function loadAppState(storage: Storage | undefined): LoadStateResult {
 export function saveAppState(state: AppState, storage: Storage | undefined): string {
   try {
     if (!storage) throw new Error("Storage unavailable");
+    if (state.pendingMigrationBackup) {
+      if (!storage.getItem(MIGRATION_BACKUP_KEY)) storage.setItem(MIGRATION_BACKUP_KEY, state.pendingMigrationBackup);
+      delete state.pendingMigrationBackup;
+    }
     storage.setItem(STORAGE_KEY, JSON.stringify({ ...state, schemaVersion: STORAGE_SCHEMA_VERSION }));
     return "";
   } catch {

@@ -70,6 +70,8 @@ Update the relevant document with every user-visible change:
 - `docs/DEPLOYMENT.md`: installation and operations
 - `CHANGELOG.md`: release-facing summary
 
+Keep user-facing documentation focused on actions, meanings and limitations. Put storage schemas, source layouts, regression fixtures, audit records and implementation rationale in the [maintainer documentation](docs/maintainers/README.md). Keep historical release notes clearly tied to their named version.
+
 ## Merge Request Checklist
 
 - [ ] The change is scoped and understandable.

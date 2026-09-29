@@ -1,76 +1,84 @@
-import type { Assumptions, CalculationResult, LoadCalculation, Project, SystemSizing } from "../types/project";
+import type { Assumptions, CalculationResult, LoadCalculation, Project, StartupEvent, SystemSizing } from "../types/project";
 
-const roundUpTo = (value: number, step: number): number => Math.ceil(value / step) * step;
-
-const safeNumber = (value: number, fallback = 0): number => (Number.isFinite(value) ? value : fallback);
+const safeNumber = (value: number, fallback = 0): number => Number.isFinite(value) ? value : fallback;
 
 export function calculateLoadRows(project: Project): LoadCalculation[] {
   return project.loads.map((load) => {
     const quantity = Math.floor(Math.max(0, safeNumber(load.quantity)));
     const watts = Math.max(0, safeNumber(load.watts));
-    const hoursPerDay = Math.min(24, Math.max(0, safeNumber(load.hoursPerDay)));
-    const surgeMultiplier = Math.max(1, safeNumber(load.surgeMultiplier, 1));
-    const runningWatts = hoursPerDay > 0 ? quantity * watts : 0;
+    const hours = Math.min(24, Math.max(0, safeNumber(load.hoursPerDay)));
+    const runningWatts = hours > 0 ? quantity * watts : 0;
+    return { load, runningWatts, dailyWh: runningWatts * hours, surgeWatts: runningWatts * Math.max(1, safeNumber(load.surgeMultiplier, 1)) };
+  });
+}
 
+/** One row starts at a time unless rows explicitly share a group, or all restart. */
+export function startupEvents(rows: LoadCalculation[], mode: Project["startupMode"] = "groups"): StartupEvent[] {
+  const active = rows.filter((row) => row.runningWatts > 0);
+  const groups = new Map<string, LoadCalculation[]>();
+  active.forEach((row, index) => {
+    const key = mode === "all" ? "all" : row.load.startupGroup?.trim() ? `group:${row.load.startupGroup.trim()}` : `row:${index}`;
+    groups.set(key, [...(groups.get(key) ?? []), row]);
+  });
+  return [...groups.values()].map((group) => {
+    const starting = new Set(group);
+    const powers = active.map((row) => starting.has(row) ? row.surgeWatts : row.runningWatts);
+    const vas = active.map((row) => starting.has(row) && (row.load.surgeMultiplier > 1 || row.load.startupVA !== undefined)
+      ? row.load.startupVA === undefined ? undefined : row.load.quantity * row.load.startupVA
+      : row.load.powerFactor === undefined ? undefined : row.runningWatts / row.load.powerFactor);
+    const durations = group.filter((row) => row.load.surgeMultiplier > 1 || row.load.startupVA !== undefined).map((row) => row.load.startupSeconds);
     return {
-      load,
-      runningWatts,
-      dailyWh: runningWatts * hoursPerDay,
-      surgeWatts: runningWatts * surgeMultiplier,
+      watts: powers.reduce((a, b) => a + b, 0),
+      voltAmps: vas.every((v) => v !== undefined) ? vas.reduce<number>((a, b) => a + b!, 0) : undefined,
+      durationSeconds: durations.every((v) => v !== undefined) ? Math.max(0, ...durations as number[]) : undefined,
     };
   });
 }
 
-function sizeSystem(
-  adjustedDailyWh: number,
-  inverterRunningW: number,
-  inverterSurgeW: number,
-  project: Project,
-  assumptions: Assumptions,
-  includeInverter: boolean,
-): SystemSizing {
-  const autonomyDays = Math.max(0.5, project.autonomyDays);
-  const sunHours = Math.max(0.5, project.sunHours);
-  const systemVoltage = Math.max(12, project.systemVoltage);
-  const requiredBatteryWh =
-    (adjustedDailyWh * autonomyDays * assumptions.batteryReserveFactor) / assumptions.batteryDepthOfDischarge;
-  const recommendedSolarArrayW = roundUpTo((adjustedDailyWh / sunHours / assumptions.arrayDerateFactor) * assumptions.batteryReserveFactor, 10);
-  const recommendedMpptCurrentA = (recommendedSolarArrayW / systemVoltage) * assumptions.mpptSafetyFactor;
-  const recommendedInverterW = Math.max(inverterRunningW * assumptions.inverterHeadroomFactor, inverterSurgeW);
-
+function sizeSystem(energy: number, runningW: number, surgeW: number, project: Project, assumptions: Assumptions, inverter: boolean): SystemSizing {
+  const solar = energy / Math.max(0.5, project.sunHours) / assumptions.arrayDerateFactor * assumptions.batteryReserveFactor;
   return {
-    adjustedDailyWh,
-    requiredBatteryWh: roundUpTo(requiredBatteryWh, 100),
-    recommendedSolarArrayW: roundUpTo(recommendedSolarArrayW, 10),
-    recommendedMpptCurrentA: roundUpTo(recommendedMpptCurrentA, 5),
-    recommendedInverterW: includeInverter ? roundUpTo(recommendedInverterW, 100) : 0,
+    adjustedDailyWh: energy,
+    requiredBatteryWh: energy * Math.max(0.5, project.autonomyDays) * assumptions.batteryReserveFactor / assumptions.batteryDepthOfDischarge,
+    recommendedSolarArrayW: solar,
+    recommendedMpptCurrentA: solar / Math.max(12, project.systemVoltage) * assumptions.mpptSafetyFactor,
+    recommendedInverterW: inverter ? Math.max(runningW * assumptions.inverterHeadroomFactor, surgeW) : 0,
   };
 }
 
-export function calculateProject(project: Project, assumptions: Assumptions): CalculationResult {
-  const loadRows = calculateLoadRows(project);
-  const totalDailyWh = loadRows.reduce((sum, row) => sum + row.dailyWh, 0);
-  const peakLoadW = loadRows.reduce((sum, row) => sum + row.runningWatts, 0);
-  const surgeLoadW = Math.max(0, ...loadRows.map((row) => peakLoadW - row.runningWatts + row.surgeWatts));
-  const acLoadRows = loadRows.filter((row) => row.load.currentType === "AC");
-  const acPeakLoadW = acLoadRows.reduce((sum, row) => sum + row.runningWatts, 0);
-  const acSurgeLoadW = Math.max(0, ...acLoadRows.map((row) => acPeakLoadW - row.runningWatts + row.surgeWatts));
-  const criticalDailyWh = loadRows.filter((row) => row.load.critical).reduce((sum, row) => sum + row.dailyWh, 0);
-  const dcAdjustedWh = totalDailyWh / assumptions.dcDistributionEfficiency;
-  const hybridAdjustedWh = loadRows.reduce((sum, row) => {
-    const efficiency = row.load.currentType === "AC" ? assumptions.inverterEfficiency : assumptions.hybridDcEfficiency;
-    return sum + row.dailyWh / efficiency;
-  }, 0);
+export interface EnergyContext {
+  efficiency?: number;
+  source?: "manual" | "manufacturer" | "fallback";
+  productId?: string;
+  noLoadWatts?: number;
+  inverterPresent?: boolean;
+}
 
+export function calculateProject(project: Project, assumptions: Assumptions, context: EnergyContext = {}): CalculationResult {
+  const rows = calculateLoadRows(project);
+  const ac = rows.filter((row) => row.load.currentType === "AC" && row.runningWatts > 0);
+  const totalDailyWh = rows.reduce((s, r) => s + r.dailyWh, 0);
+  const peakLoadW = rows.reduce((s, r) => s + r.runningWatts, 0);
+  const acPeakLoadW = ac.reduce((s, r) => s + r.runningWatts, 0);
+  const acEvents = startupEvents(ac, project.startupMode);
+  const acSurgeLoadW = Math.max(0, ...acEvents.map((e) => e.watts));
+  const manual = project.inverterSettings?.mode === "manual" ? project.inverterSettings.efficiency : undefined;
+  const efficiency = manual ?? context.efficiency ?? assumptions.inverterEfficiency;
+  const idleDailyWh = context.inverterPresent ? (context.noLoadWatts ?? 0) * (project.inverterSettings?.unloadedHoursPerDay ?? 0) : 0;
+  const hybridWh = rows.reduce((s, r) => s + r.dailyWh / (r.load.currentType === "AC" ? efficiency : assumptions.hybridDcEfficiency), idleDailyWh);
   return {
-    loadRows,
-    totalDailyWh,
-    peakLoadW,
-    surgeLoadW,
-    acPeakLoadW,
-    acSurgeLoadW,
-    criticalDailyWh,
-    dc: sizeSystem(dcAdjustedWh, 0, 0, project, assumptions, false),
-    hybrid: sizeSystem(hybridAdjustedWh, acPeakLoadW, acSurgeLoadW, project, assumptions, true),
+    loadRows: rows, totalDailyWh, peakLoadW,
+    surgeLoadW: Math.max(0, ...startupEvents(rows, project.startupMode).map((e) => e.watts)),
+    acPeakLoadW, acSurgeLoadW,
+    criticalDailyWh: rows.filter((r) => r.load.critical).reduce((s, r) => s + r.dailyWh, 0),
+    dc: sizeSystem(totalDailyWh / assumptions.dcDistributionEfficiency, 0, 0, project, assumptions, false),
+    hybrid: sizeSystem(hybridWh, acPeakLoadW, acSurgeLoadW, project, assumptions, true),
+    inverterDemand: {
+      continuousW: acPeakLoadW * assumptions.inverterHeadroomFactor,
+      continuousVA: ac.every((r) => r.load.powerFactor !== undefined) ? ac.reduce((s, r) => s + r.runningWatts / r.load.powerFactor!, 0) * assumptions.inverterHeadroomFactor : undefined,
+      events: acEvents,
+    },
+    effectiveEfficiency: { value: efficiency, source: manual !== undefined ? "manual" : context.source ?? "fallback", productId: context.productId },
+    idleDailyWh,
   };
 }

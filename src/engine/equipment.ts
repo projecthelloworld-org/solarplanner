@@ -11,11 +11,14 @@ import type {
   SystemOptionId,
   Project,
   Assumptions,
+  StartupEvent,
 } from "../types/project";
+import { atLeast, batteryDemand, engineeringCheck, inverterChecks, inverterRequirement, technicalChecks } from "./engineering";
+import { startupEvents } from "./calculations";
 import sampleData from "../data/sample-project.json";
 import productsData from "../data/default-products.json";
 
-const ceilTo = (value: number, step: number): number => Math.ceil(value / Math.max(1, step)) * Math.max(1, step);
+const countFor = (requirement: number, capacity: number): number => Math.max(0, Math.ceil(requirement / capacity - 1e-10));
 const safePositive = (value: number, fallback: number): number => (Number.isFinite(value) && value > 0 ? value : fallback);
 const defaultCatalog = productsData as ProductCatalog;
 
@@ -38,18 +41,28 @@ function selectPanel(requirement: number, maximumWatts: number, catalog: Product
   return practicalChoice(catalog.solarPanels
     .filter((item) => item.watts && item.watts <= maximumWatts)
     .map((item) => {
-      const count = Math.ceil(requirement / item.watts!);
+      const count = countFor(requirement, item.watts!);
       return { item, count, total: count * item.unitCost };
     }));
 }
 
-function selectBattery(requirement: number, maximumWh: number, project: Project, catalog: ProductCatalog, dischargeW: number): ProductChoice | undefined {
+function selectBattery(requirement: number, maximumWh: number, project: Project, catalog: ProductCatalog, dischargeW: number, chargeA = 0, events: StartupEvent[] = []): ProductChoice | undefined {
   const choices = catalog.batteries.flatMap((item) => {
     if (!item.voltage || !item.ampHours || !item.wattHours) return [];
     const series = batterySeriesCount(project.systemVoltage, item.voltage);
     if (!series || series > (item.maxSeries ?? 1)) return [];
-    const powerStrings = item.continuousDischargeA ? Math.ceil(dischargeW / (project.systemVoltage * item.continuousDischargeA)) : 0;
-    const count = Math.max(Math.ceil(requirement / (item.wattHours * series)), powerStrings) * series;
+    const voltage = item.minimumVoltage ? item.minimumVoltage * series : project.systemVoltage;
+    const powerStrings = item.continuousDischargeA ? countFor(dischargeW, voltage * item.continuousDischargeA) : 0;
+    const wattsStrings = item.continuousDischargeW ? countFor(dischargeW, item.continuousDischargeW * series) : 0;
+    const chargeStrings = item.maxChargeA ? countFor(chargeA, item.maxChargeA) : 0;
+    const chargePowerStrings = item.maxChargeW && item.chargeVoltage ? countFor(chargeA * item.chargeVoltage, item.maxChargeW) : 0;
+    const startupStrings = Math.max(0, ...events.map((event) => {
+      const timed = event.durationSeconds !== undefined && item.startupDischargeSeconds !== undefined && event.durationSeconds <= item.startupDischargeSeconds;
+      const amps = timed ? item.startupDischargeA ?? item.continuousDischargeA : item.continuousDischargeA;
+      const watts = timed ? item.startupDischargeW ?? item.continuousDischargeW : item.continuousDischargeW;
+      return Math.max(amps ? countFor(event.watts, voltage * amps) : 0, watts ? countFor(event.watts, series * watts) : 0);
+    }));
+    const count = Math.max(countFor(requirement, item.wattHours * series), powerStrings, wattsStrings, chargeStrings, chargePowerStrings, startupStrings) * series;
     if (count / series > (item.maxParallel ?? 1)) return [];
     return [{ item, count, total: count * item.unitCost, parallelStrings: count / series }];
   });
@@ -64,7 +77,7 @@ function selectController(requirement: number, maximumAmps: number, voltage: num
   const preferred = compatible.filter((item) => item.amps! <= maximumAmps);
   return practicalChoice((preferred.length ? preferred : compatible)
     .map((item) => {
-      const pvLimit = item.pvWattsByVoltage?.[String(voltage)];
+      const pvLimit = item.maxPvWatts ?? item.pvWattsByVoltage?.[String(voltage)];
       const count = Math.max(Math.ceil(requirement / item.amps!), pvLimit ? Math.ceil(arrayWatts / pvLimit) : 0);
       return { item, count, total: count * item.unitCost };
     }));
@@ -83,7 +96,7 @@ export function supplementaryControllers(inverter: ProductItem, controller: Prod
   const residualA = Math.max(0, requiredAmps - (inverter.integratedMpptA ?? 0));
   const residualW = Math.max(0, arrayWatts - (inverter.maxPvWatts ?? 0));
   if (!residualA && !residualW) return 0;
-  const pvLimit = controller?.pvWattsByVoltage?.[String(voltage)];
+  const pvLimit = controller?.maxPvWatts ?? controller?.pvWattsByVoltage?.[String(voltage)];
   if (!controller?.amps || !controller.supportedVoltages?.includes(voltage) || !pvLimit) return undefined;
   return Math.max(Math.ceil(residualA / controller.amps), Math.ceil(residualW / pvLimit));
 }
@@ -134,36 +147,38 @@ export function batterySeriesCount(systemVoltage: number, batteryVoltage: number
 }
 
 export function requiredControllerAmps(arrayWatts: number, project: Project, assumptions: Assumptions): number {
-  return ceilTo(arrayWatts / project.systemVoltage * assumptions.mpptSafetyFactor, 5);
+  return arrayWatts / project.systemVoltage * assumptions.mpptSafetyFactor;
 }
 
 export function generateEquipmentPlan(result: CalculationResult, defaults: EquipmentDefaults, project: Project, assumptions: Assumptions, catalog: ProductCatalog = defaultCatalog): EquipmentPlan {
   const maximumPanelWatts = safePositive(defaults.panelWatts, 450);
   const maximumBatteryWh = safePositive(defaults.batteryVoltage, 25.6) * safePositive(defaults.batteryAh, 100);
   const maximumControllerAmps = safePositive(defaults.mpptAmpStep, 60);
-  const sharedSolarRequirement = Math.max(result.dc.recommendedSolarArrayW, result.hybrid.recommendedSolarArrayW);
-  const sharedBatteryRequirement = Math.max(result.dc.requiredBatteryWh, result.hybrid.requiredBatteryWh);
+  const system = project.selectedSystem === "hybrid" ? "hybrid" : "dc";
+  const sizing = result[system];
+  const sharedSolarRequirement = sizing.recommendedSolarArrayW;
+  const sharedBatteryRequirement = sizing.requiredBatteryWh;
   const panelChoice = selectPanel(sharedSolarRequirement, maximumPanelWatts, catalog);
   const panelWatts = panelChoice?.item.watts ?? maximumPanelWatts;
   const panelCount = panelChoice?.count ?? Math.ceil(sharedSolarRequirement / panelWatts);
-  const dischargeW = Math.max(result.peakLoadW / assumptions.dcDistributionEfficiency,
-    (result.peakLoadW - result.acPeakLoadW) / assumptions.hybridDcEfficiency + result.acPeakLoadW / assumptions.inverterEfficiency);
-  const batteryChoice = selectBattery(sharedBatteryRequirement, maximumBatteryWh, project, catalog, dischargeW);
-  const batteryVoltage = batteryChoice?.item.voltage ?? ({ 12: 12.8, 24: 25.6, 48: 51.2 }[project.systemVoltage] ?? project.systemVoltage);
-  const batteryAh = batteryChoice?.item.ampHours ?? 0;
+  const dischargeW = batteryDemand(result, system, assumptions).runningW;
   const controllerRequirement = requiredControllerAmps(panelCount * panelWatts, project, assumptions);
   const arrayWatts = panelCount * panelWatts;
   const controllerChoice = selectController(controllerRequirement, maximumControllerAmps, project.systemVoltage, arrayWatts, catalog);
   const mpptAmpStep = controllerChoice?.item.amps ?? 0;
   const controllerCount = controllerChoice?.count ?? 0;
-  const combinations = result.hybrid.recommendedInverterW > 0 ? catalog.hybridInverters
-    .filter((item) => item.systemVoltage === project.systemVoltage && item.watts! >= result.hybrid.recommendedInverterW)
+  const combinations = system === "hybrid" && result.hybrid.recommendedInverterW > 0 ? catalog.hybridInverters
+    .filter((item) => !inverterChecks(result, item, project).some((check) => check.status === "failed"))
     .map((item) => {
       const count = supplementaryControllers(item, controllerChoice?.item, project.systemVoltage, arrayWatts, controllerRequirement);
       return { item, externalCount: count ?? 0, resolved: count !== undefined, total: item.unitCost + (count ?? 0) * (controllerChoice?.item.unitCost ?? 0) };
     }).filter((choice) => choice.resolved).sort((a, b) => a.total - b.total || a.item.watts! - b.item.watts!) : [];
   const inverterChoice = combinations[0];
   const inverterWatts = inverterChoice?.item.watts ?? 0;
+  const chargeA = system === "dc" ? controllerCount * mpptAmpStep : (inverterChoice?.externalCount ?? controllerCount) * mpptAmpStep + (inverterChoice?.item.integratedMpptA ?? 0);
+  const batteryChoice = selectBattery(sharedBatteryRequirement, maximumBatteryWh, project, catalog, dischargeW, chargeA, startupEvents(batteryDemand(result, system, assumptions).rows, project.startupMode));
+  const batteryVoltage = batteryChoice?.item.voltage ?? ({ 12: 12.8, 24: 25.6, 48: 51.2 }[project.systemVoltage] ?? project.systemVoltage);
+  const batteryAh = batteryChoice?.item.ampHours ?? 0;
   const hasDemand = sharedSolarRequirement > 0;
 
   return {
@@ -191,7 +206,7 @@ export function generateEquipmentPlan(result: CalculationResult, defaults: Equip
     },
     balance: {
       dcDistributionCount: hasDemand ? 1 : 0,
-      acDistributionCount: result.hybrid.recommendedInverterW > 0 ? 1 : 0,
+      acDistributionCount: system === "hybrid" && result.hybrid.recommendedInverterW > 0 ? 1 : 0,
       cablingCount: hasDemand ? 1 : 0,
       earthingCount: hasDemand ? 1 : 0,
       monitoringCount: hasDemand && (sharedSolarRequirement > 300 || result.loadRows.filter((row) => row.runningWatts > 0).length > 1) ? 1 : 0,
@@ -215,18 +230,19 @@ const fmt = (value: number, unit: string): string => {
 };
 
 function check(label: string, actual: number, required: number, unit: string): AdequacyCheck {
-  const passed = actual >= required;
+  const passed = atLeast(actual, required);
   return {
     label,
     actual,
     required,
     unit,
     passed,
+    status: passed ? "passed" : "failed",
     warning: passed ? undefined : `${label} is ${fmt(actual, unit)}; recommendation is ${fmt(required, unit)}.`,
   };
 }
 
-export function evaluateEquipmentPlan(result: CalculationResult, plan: EquipmentPlan, systemId: SystemOptionId, project: Project, assumptions: Assumptions): EquipmentEvaluation {
+export function evaluateEquipmentPlan(result: CalculationResult, plan: EquipmentPlan, systemId: SystemOptionId, project: Project, assumptions: Assumptions, catalog: ProductCatalog = defaultCatalog): EquipmentEvaluation {
   const actuals = getEquipmentActuals(plan);
   const sizing = systemId === "dc" ? result.dc : result.hybrid;
   const checks = [
@@ -236,7 +252,7 @@ export function evaluateEquipmentPlan(result: CalculationResult, plan: Equipment
   ];
 
   if (systemId === "hybrid") {
-    checks.push(check("Inverter capacity", actuals.hybridInverterW, sizing.recommendedInverterW, "W"));
+    checks.push(check("Inverter capacity", actuals.hybridInverterW, inverterRequirement(result, matchedInverter(plan, catalog)), "W"));
   }
 
   const warnings = checks.flatMap((item) => (item.warning ? [item.warning] : []));
@@ -244,24 +260,25 @@ export function evaluateEquipmentPlan(result: CalculationResult, plan: Equipment
   const activeLoads = result.loadRows.filter((row) => row.runningWatts > 0);
   const seriesCount = batterySeriesCount(project.systemVoltage, plan.shared.batteryVoltage);
   if (![12, 24, 48].includes(project.systemVoltage)) warnings.push("This system voltage has no supported catalogue configuration. Choose 12, 24 or 48 V, or obtain a reviewed custom design.");
-  const battery = defaultCatalog.batteries.find((item) => item.id === plan.shared.batteryProductId && item.voltage === plan.shared.batteryVoltage && item.ampHours === plan.shared.batteryAh);
+  const battery = catalog.batteries.find((item) => item.id === plan.shared.batteryProductId && item.voltage === plan.shared.batteryVoltage && item.ampHours === plan.shared.batteryAh);
   if (activeLoads.length && !battery) warnings.push("Battery specification is unverified or no compatible battery was found. Regenerate equipment or obtain a matching battery quote; this estimate may be incomplete.");
   if (battery && seriesCount && plan.shared.batteryCount > 0) {
     if (seriesCount > (battery.maxSeries ?? 1)) warnings.push("Battery series connection is not approved in the reference specification. Use a native-voltage battery or a manufacturer-approved string.");
     if (plan.shared.batteryCount / seriesCount > (battery.maxParallel ?? 1)) warnings.push("Battery parallel quantity exceeds the documented limit or parallel approval is unknown.");
-    const dischargeW = systemId === "dc" ? result.peakLoadW / assumptions.dcDistributionEfficiency : (result.peakLoadW - result.acPeakLoadW) / assumptions.hybridDcEfficiency + result.acPeakLoadW / assumptions.inverterEfficiency;
-    if (!battery.continuousDischargeA) warnings.push("Battery continuous discharge limit is unknown. Confirm the BMS rating against running and starting loads.");
-    else if (dischargeW / project.systemVoltage > battery.continuousDischargeA * plan.shared.batteryCount / seriesCount) warnings.push("Battery BMS continuous discharge current is below the running-load requirement.");
     notes.push(`Battery reference: ${battery.name}. Series limit: ${battery.maxSeries ?? "unknown"}; parallel limit: ${battery.maxParallel ?? "unknown"}. Starting-current duration and charge limits require review.`);
   }
   const selectedController = systemId === "dc" ? plan.dc : plan.hybrid;
-  const controllerProduct = defaultCatalog.chargeControllers.find((item) => item.id === selectedController.controllerProductId && item.amps === selectedController.mpptAmps);
+  const controllerProduct = catalog.chargeControllers.find((item) => item.id === selectedController.controllerProductId && item.amps === selectedController.mpptAmps);
   if (selectedController.controllerCount > 0 && !controllerProduct?.supportedVoltages?.includes(project.systemVoltage)) warnings.push("Separate MPPT/controller voltage or rating is unverified or incompatible with the system voltage.");
-  const inverterProduct = matchedInverter(plan);
+  const inverterProduct = matchedInverter(plan, catalog);
   if (systemId === "hybrid" && sizing.recommendedInverterW > 0 && (!inverterProduct || inverterProduct.systemVoltage !== project.systemVoltage || plan.hybrid.inverterCount !== 1)) warnings.push("A compatible single inverter has not been verified for this voltage and demand. Obtain a matching quote; the estimate may be incomplete.");
   const integratedPvW = systemId === "hybrid" && plan.hybrid.inverterCount === 1 ? inverterProduct?.maxPvWatts ?? 0 : 0;
-  const externalPvW = (controllerProduct?.pvWattsByVoltage?.[String(project.systemVoltage)] ?? 0) * selectedController.controllerCount;
-  if (activeLoads.length && actuals.solarArrayW > integratedPvW + externalPvW) warnings.push("Installed PV exceeds documented controller input power, or the PV input limit is unknown. Review array allocation and obtain a matching controller.");
+  const externalPvW = (controllerProduct?.maxPvWatts ?? controllerProduct?.pvWattsByVoltage?.[String(project.systemVoltage)] ?? 0) * selectedController.controllerCount;
+  if (activeLoads.length) {
+    const limitKnown = (selectedController.controllerCount === 0 || controllerProduct?.pvWattsByVoltage?.[String(project.systemVoltage)] !== undefined || controllerProduct?.maxPvWatts !== undefined) && (systemId !== "hybrid" || !includedMpptAmps(plan) || inverterProduct?.maxPvWatts !== undefined);
+    const totalLimit = integratedPvW + externalPvW;
+    checks.push(engineeringCheck("Controller aggregate PV input power", !limitKnown ? "unverified" : atLeast(totalLimit, actuals.solarArrayW) ? "passed" : "failed", `Installed PV ${actuals.solarArrayW} W; documented controller input ${limitKnown ? totalLimit : "unknown"} W. Verify individual input allocation.`, totalLimit, actuals.solarArrayW, "W"));
+  }
   if (activeLoads.length === 0) warnings.push("No active loads. Enter quantity, watts and hours per day above zero to size a system.");
   if (plan.shared.batteryCount > 0 && (!seriesCount || plan.shared.batteryCount % seriesCount !== 0)) {
     warnings.push(`The ${plan.shared.batteryCount} batteries at ${plan.shared.batteryVoltage} V do not form complete strings for a ${project.systemVoltage} V system. Check battery voltage and quantity.`);
@@ -281,7 +298,7 @@ export function evaluateEquipmentPlan(result: CalculationResult, plan: Equipment
     warnings.push("Inverter watts are an aggregate only. Multiple inverters cannot be assumed to share a load; confirm approved parallel operation or separately sized circuits.");
   }
   if (systemId === "hybrid" && plan.hybrid.inverterCount > 0) {
-    notes.push("Check continuous watts, VA, starting surge duration and temperature ratings. Inverter idle consumption is not included: add it as a DC load for the hours the inverter remains on.");
+    notes.push("Continuous watts, VA and startup duration are checked separately. Inverter idle consumption uses only explicitly entered energized-but-unloaded hours; do not also enter it as an appliance load. Temperature derating requires review.");
     notes.push(inverterDescription(plan));
     if (includedMpptAmps(plan) > 0) notes.push("Integrated MPPT capacity is included once in the inverter price. Any separately listed controller covers the remaining array; verify PV string allocation and input voltage windows.");
   }
@@ -296,17 +313,24 @@ export function evaluateEquipmentPlan(result: CalculationResult, plan: Equipment
   const controllerPrice = systemId === "dc" ? project.pricing.controllerUnitUsd : project.pricing.hybridControllerUnitUsd ?? project.pricing.controllerUnitUsd;
   if (project.equipmentPlanMode === "custom" && controller.controllerCount > 0 && controller.mpptAmps !== sampleData.equipmentDefaults.mpptAmpStep && controllerPrice === sampleData.pricing.controllerUnitUsd) warnings.push(`Controller price is still the USD ${sampleData.pricing.controllerUnitUsd} starter allowance for 60 A; the plan uses ${controller.mpptAmps} A per controller. Review the unit price.`);
   if (activeLoads.length > 0) {
-    notes.push("Peak assumes all active loads run together. Surge assumes one device group starts while others run; simultaneous restarts can require more power. Zero quantity or hours excludes a row.");
+    notes.push("Peak assumes all active loads run together. Startup follows the selected grouping: named groups restart together; unnamed rows start separately, unless all-load restart is selected. Zero quantity or hours excludes a row.");
     notes.push("Battery Wh is nominal storage before depth-of-discharge limits. Autonomy covers all loads, including non-critical loads; the critical flag only identifies priority energy. Check battery/BMS discharge current as well as energy capacity.");
     notes.push("Solar covers typical daily use plus the reserve allowance. Use low-season peak sun hours; a larger battery alone does not guarantee recovery after several cloudy days.");
     notes.push("Prices are editable allowances. Recheck unit prices when ratings change; taxes, delivery, mounting and site-specific work may need additional allowance.");
   }
 
+  checks.push(...technicalChecks(result, plan, systemId, project, assumptions, catalog));
+  for (const warning of warnings) {
+    if (!checks.some((item) => item.warning === warning)) checks.push(engineeringCheck("Planning compatibility", /unknown|unverified|not been verified|approval is unknown/i.test(warning) ? "unverified" : "failed", warning));
+  }
+  const allWarnings = [...new Set(checks.filter((item) => item.status === "failed").map((item) => item.warning ?? item.detail ?? item.label))];
+  const unverified = [...new Set(checks.filter((item) => item.status === "unverified").map((item) => item.detail ?? item.label))];
   return {
     systemId,
-    status: warnings.length === 0 ? "Preliminary checks met" : "Needs attention",
+    status: allWarnings.length === 0 && unverified.length === 0 ? "Preliminary checks met" : "Needs attention",
     checks,
-    warnings,
+    warnings: allWarnings,
+    unverified,
     notes,
   };
 }
