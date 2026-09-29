@@ -6,7 +6,7 @@ Prices are indicative African market planning estimates. A ±10% variation aroun
 
 Unit prices are editable USD amounts. Generated equipment uses the price for its selected reference; some prices match named products, while others are allowances for a comparable equipment class. Prices do not establish product compatibility or availability.
 
-The reference observations date from August–September 2026. They are not live supplier quotations. Compare equipment specifications, warranty, tax and delivery terms before replacing an allowance with a local quotation.
+The reference observations date from August–September 2026. Additional size estimates were reviewed on 29 September 2026. They are not live supplier quotations. Compare equipment specifications, warranty, tax and delivery terms before replacing an allowance with a local quotation.
 
 ## Optional Budgeting Range
 
@@ -47,7 +47,7 @@ The optional ±10% budgeting range described above is not an additional charge i
 
 ## Keeping Local Quotations
 
-DC and Hybrid options keep independent prices. Manual price edits survive **Calculate** and **Use generated values**. Calculate regenerates both equipment plans. Selecting a different named product instead applies its reference price for that item. Use **Use reference price** to clear an override. Changed or unknown equipment references are flagged beside retained quotations. Review a retained quotation when equipment changes: a price for one product may not apply to its replacement.
+DC and Hybrid options keep independent prices. Manual price edits survive **Calculate** and **Use generated values**. Calculate regenerates both equipment plans. Selecting a different reference instead applies its reference price for that item. Use **Use reference price** to clear an override. Changed or unknown equipment references are flagged beside retained quotations. Review a retained quotation when equipment changes: a price for one product may not apply to its replacement.
 
 Integrated MPPT capacity is included in a hybrid inverter's price once. Any separately required controller is costed separately.
 
@@ -56,3 +56,11 @@ Integrated MPPT capacity is included in a hybrid inverter's price once. Any sepa
 Obtain quotations for matching equipment and confirm delivery, tax, warranty, mounting and installation scope. Cable lengths, protection requirements, lightning exposure and remote-site work can change the total substantially. These costs are not reliably covered by supplier listing prices or broad allowances.
 
 Keep quotation dates and specification evidence with the project records. The [maintainer evidence record](maintainers/PRICING_EVIDENCE.md) preserves the original research and its limitations.
+
+## Available Sizes and Price Basis
+
+The panel selector includes 50, 100, 160, 200, 330, 450 and 550 W references. Battery choices include 12.8 V at 20/40/50/100 Ah, 25.6 V at 50/100 Ah and 51.2 V at 50/100 Ah. MPPT choices include 10/20/30/40/60/100 A; supported battery voltages vary. Not every size is suitable for every system.
+
+Representative size estimates use observed comparable retail prices, not a measured continent-wide average. New references retain their original currencies, dates and conversion assumptions in the equipment reference CSV and maintainer evidence. Premium and basic equipment can differ substantially in price even at the same current rating. Unknown electrical ratings remain unverified.
+
+Balanced selection compares complete equipment subtotals, then favors closer combined capacity fit within a 10% cost window. This does not multiply your estimate by 10%, change your chosen contingency, or apply the optional ±10% budgeting range.

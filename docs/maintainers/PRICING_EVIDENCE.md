@@ -137,3 +137,28 @@ Unit prices are editable USD assumptions, even when the project displays KES or 
 ## Reviewing Prices for Your Project
 
 Replace the starter allowances with current quotations for matching equipment. Confirm tax, delivery, warranty, mounting and installation scope. Keep the quotation date and specification evidence with your project records.
+
+## Size expansion — observed 29 September 2026
+
+These are representative size estimates, not new manufacturer-verified catalogue specifications or continental averages. Existing IDs and prices are retained. New observations are VAT-inclusive retail prices. Delivery, import and installation costs are not included. Conversion uses a fixed planning assumption of **16.3 ZAR per USD**, rounded to the nearest USD 5; it is not a live exchange rate. [USD/ZAR market reference](https://www.investing.com/currencies/usd-zar) showed an opening value of 16.3046 during this review. Project display-currency conversion is unchanged.
+
+| Added reference | Observed ZAR | Planning USD | Source |
+| --- | ---: | ---: | --- |
+| 50 W solar panel size estimate | 600 | 35 | [Retail observation](https://www.cyberbit.co.za/en/fixed-solar-panels/93313-50w-solar-panel-18-volt.html) |
+| 160 W solar panel size estimate | 1208 | 75 | [Retail observation](https://www.geewiz.co.za/2344-solar-panels?order=product.price.asc&page=2) |
+| 330 W solar panel size estimate | 2050 | 125 | [Retail observation](https://www.geewiz.co.za/2344-solar-panels?order=product.price.asc&page=2) |
+| 550 W solar panel size estimate | 2195 | 135 | [Retail observation](https://www.geewiz.co.za/2344-solar-panels?order=product.price.asc&page=2) |
+| 12.8 V 20 Ah LiFePO4 size estimate | 1171 | 70 | [Retail observation](https://www.geewiz.co.za/new-items/685398-265wh-20ah-128v-lifepo4-battery.html) |
+| 12.8 V 50 Ah LiFePO4 size estimate | 2495 | 155 | [Retail observation](https://www.geewiz.co.za/lithium-ion-batteries/209358-geewiz-12v-50ah-lithium-ion-lifepo4-640wh-4000-cycle-battery-first-life-cells-2-year-unlimited-cycles-warranty-4000-cycles-same-runtime-as-a-100ah-lead-acid.html) |
+| 51.2 V 50 Ah LiFePO4 size estimate | 10398.96 | 640 | [Retail observation](https://xenononline.co.za/products/giter-2-56kwh-51-2v-50ah-lfp-battery-module) |
+| 10 A MPPT size estimate (12/24 V) | 1338 | 80 | [Retail observation](https://www.geewiz.co.za/solar-charge-controller/675253-100v-10a-mppt-solar-charge-controller-for-1224v-systems.html) |
+| 40 A MPPT size estimate (12/24 V) | 2449.99 | 150 | [Retail observation](https://www.communica.co.za/products/sr-ml2440-mppt-solar-controller) |
+| 100 A MPPT size estimate (48 V) | 18114.95 | 1110 | [Retail observation](https://www.sustainable.co.za/products/victron-smartsolar-rs-450v-100a-mc4-mppt-charge-controller) |
+
+The 20 Ah listing title says 265 Wh, while 12.8 V × 20 Ah equals 256 Wh. The generic size estimate uses 256 Wh and does not claim an exact product match. The 50 Ah 12.8 V price is a promotional retail observation. The 100 A observation is a premium high-voltage PV controller for 48 V batteries, not a budget universal-voltage controller; the generic record deliberately retains no input-voltage or string ratings.
+
+Coverage gaps: no defensible local solar-storage price/specification pair was established for 25.6 V or 51.2 V 20/40 Ah sizes. No such entries were fabricated. The 160 W and 330 W panel sizes were supported by the reviewed listings; 150 W and 300 W were not substituted or linearly priced. An 80 A search surfaced unbranded marketplace offers and premium controller listings, but no comparable midrange reference was added.
+
+No manufacturer limits were copied from the retail products into representative entries. Single native-voltage batteries remain provisional; series/parallel permissions, BMS limits, charge settings and panel/controller input ratings require matching evidence.
+
+Some supplier observations were accessible through the search index when a direct page returned a site-access challenge. These are dated planning observations, not live stock guarantees. The 50 W source indicated limited stock at review. Confirm all quotations and availability before procurement.

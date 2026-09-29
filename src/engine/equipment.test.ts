@@ -93,8 +93,8 @@ describe("equipment capacity checks", () => {
     const small = { ...structuredClone(project), loads: [project.loads[0]], equipmentPlanMode: "generated" as const };
     const demand = calculateProject(small, assumptions);
     const generated = generateEquipmentPlan(demand, small.equipmentDefaults, small, assumptions);
-    expect(generated.shared).toMatchObject({ panelCount: 1, panelWatts: 200, batteryCount: 1, batteryVoltage: 25.6, batteryAh: 50 });
-    expect(generated.dc).toMatchObject({ controllerCount: 1, mpptAmps: 20 });
+    expect(generated.shared).toMatchObject({ panelCount: 1, panelWatts: 160, batteryCount: 1, batteryVoltage: 25.6, batteryAh: 50 });
+    expect(generated.dc).toMatchObject({ controllerCount: 1, mpptAmps: 10 });
     expect(generated.balance.monitoringCount).toBe(0);
     expect(evaluateEquipmentPlan(demand, generated, "dc", small, assumptions).unverified?.join(" ")).toContain("Minimum operating voltage");
   });

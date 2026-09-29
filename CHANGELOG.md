@@ -6,7 +6,10 @@ The project follows [Semantic Versioning](https://semver.org/). Release tags use
 
 ## Unreleased
 
-Use this section for changes that have not yet been included in a tagged release.
+- Add sourced equipment size estimates and a panel reference selector.
+- Compare complete equipment combinations using a 10% cost window and combined capacity fit.
+- Show required, installed and excess capacities with consistent price classifications in reports.
+- Collapse unverified equipment checks by default.
 
 ## 1.3.2 - 2026-09-29
 

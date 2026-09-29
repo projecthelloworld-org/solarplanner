@@ -12,14 +12,14 @@ const fixture = () => normalizeProject({ ...structuredClone(sample) as Project, 
 describe("equipment prices and regeneration", () => {
   it("reconciles both screenshot options and quantity edits", () => {
     const project = fixture(); const base = getProjectBundle(project, assumptions);
-    expect(base.costs.map(c => c.totalUsd)).toEqual([2188.34, 2188.34]);
-    const plan = structuredClone(base.options.dc.plan); plan.shared.panelCount = 2;
+    expect(base.costs.map(c => c.totalUsd)).toEqual([2335.08, 2335.08]);
+    const plan = structuredClone(base.options.dc.plan); plan.shared.panelCount += 1;
     project.optionPlans!.dc = { mode: "custom", equipment: plan, pricingOverrides: {} };
     const changed = getProjectBundle(project, assumptions);
-    expect(changed.options.dc.pricing.panelUnitUsd).toBe(110);
-    expect(changed.options.dc.priceDetails[0].totalUsd).toBe(220);
-    expect(changed.options.dc.cost.totalUsd).toBe(2328.7);
-    expect(changed.options.hybrid.cost.totalUsd).toBe(2188.34);
+    expect(changed.options.dc.pricing.panelUnitUsd).toBe(45);
+    expect(changed.options.dc.priceDetails[0].totalUsd).toBe(270);
+    expect(changed.options.dc.cost.totalUsd).toBe(2392.5);
+    expect(changed.options.hybrid.cost.totalUsd).toBe(2335.08);
   });
   it("regenerates both edited plans while retaining quotations", () => {
     const project = fixture(); const base = getProjectBundle(project, assumptions);
@@ -32,7 +32,7 @@ describe("equipment prices and regeneration", () => {
       expect(next.optionPlans![system]!.mode).toBe("generated");
       expect(bundle.options[system].plan.shared.panelCount).toBe(1);
       expect(bundle.options[system].pricing.panelUnitUsd).toBe(123);
-      expect(bundle.options[system].priceDetails[0].review).toBe(false);
+      expect(bundle.options[system].priceDetails[0].review).toBe(priceIdentity(base.options[system].plan, "panelUnitUsd") !== priceIdentity(bundle.options[system].plan, "panelUnitUsd"));
     }
   });
   it("flags changed and unknown quote identities and preserves them on reload", () => {
@@ -54,8 +54,8 @@ describe("equipment prices and regeneration", () => {
   });
   it("clears ratings of replaced products, preserves general inputs and rechecks allocations", () => {
     const project = fixture(); const plan = structuredClone(getProjectBundle(project, assumptions).plan);
-    plan.shared.panelProductId = "pv-100"; plan.shared.panelWatts = 100;
-    project.optionPlans!.dc = { mode: "custom", equipment: plan, pricingOverrides: {}, engineering: { panel: { voc: 22 }, minimumCellTemperatureC: 0, pvAssignments: [{ target: "separate", controllerIndex: 1, input: 1, series: 2, parallel: 1 }] } };
+    plan.shared.panelProductId = undefined; plan.shared.panelWatts = 999;
+    project.optionPlans!.dc = { mode: "custom", equipment: plan, pricingOverrides: {}, engineering: { panel: { voc: 22 }, minimumCellTemperatureC: 0, pvAssignments: [{ target: "separate", controllerIndex: 1, input: 1, series: 99, parallel: 1 }] } };
     const next = regenerateEquipment(project, assumptions);
     expect(next.optionPlans!.dc!.engineering?.panel).toBeUndefined();
     expect(next.optionPlans!.dc!.engineering?.minimumCellTemperatureC).toBe(0);

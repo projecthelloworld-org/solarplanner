@@ -1,3 +1,5 @@
+import { balancedFit, capacityExcess } from "./balanced-fit";
+import { estimateCosts } from "./costing";
 import type {
   AdequacyCheck,
   CalculationResult,
@@ -28,12 +30,12 @@ interface ProductChoice {
   total: number;
 }
 
-// Prefer materially cheaper systems, then reduce component count when the cost is within 30%.
+// Used only within a fixed-product combination and unresolved fallback.
 function practicalChoice(choices: ProductChoice[]): ProductChoice | undefined {
   if (choices.length === 0) return undefined;
   const cheapest = Math.min(...choices.map((choice) => choice.total));
   return choices
-    .filter((choice) => choice.total <= cheapest * 1.3)
+    .filter((choice) => choice.total <= cheapest * 1.1)
     .sort((a, b) => a.count - b.count || a.total - b.total)[0];
 }
 
@@ -97,8 +99,8 @@ export function supplementaryControllers(inverter: ProductItem, controller: Prod
   const residualW = Math.max(0, arrayWatts - (inverter.maxPvWatts ?? 0));
   if (!residualA && !residualW) return 0;
   const pvLimit = controller?.maxPvWatts ?? controller?.pvWattsByVoltage?.[String(voltage)];
-  if (!controller?.amps || !controller.supportedVoltages?.includes(voltage) || !pvLimit) return undefined;
-  return Math.max(Math.ceil(residualA / controller.amps), Math.ceil(residualW / pvLimit));
+  if (!controller?.amps || !controller.supportedVoltages?.includes(voltage)) return undefined;
+  return Math.max(Math.ceil(residualA / controller.amps), pvLimit ? Math.ceil(residualW / pvLimit) : residualW > 0 ? 1 : 0);
 }
 
 export function inverterDescription(plan: EquipmentPlan): string {
@@ -150,7 +152,7 @@ export function requiredControllerAmps(arrayWatts: number, project: Project, ass
   return arrayWatts / project.systemVoltage * assumptions.mpptSafetyFactor;
 }
 
-export function generateEquipmentPlan(result: CalculationResult, defaults: EquipmentDefaults, project: Project, assumptions: Assumptions, catalog: ProductCatalog = defaultCatalog): EquipmentPlan {
+function buildEquipmentPlan(result: CalculationResult, defaults: EquipmentDefaults, project: Project, assumptions: Assumptions, catalog: ProductCatalog = defaultCatalog): EquipmentPlan {
   const maximumPanelWatts = safePositive(defaults.panelWatts, 450);
   const maximumBatteryWh = safePositive(defaults.batteryVoltage, 25.6) * safePositive(defaults.batteryAh, 100);
   const maximumControllerAmps = safePositive(defaults.mpptAmpStep, 60);
@@ -212,6 +214,56 @@ export function generateEquipmentPlan(result: CalculationResult, defaults: Equip
       monitoringCount: hasDemand && (sharedSolarRequirement > 300 || result.loadRows.filter((row) => row.runningWatts > 0).length > 1) ? 1 : 0,
     },
   };
+}
+
+export function equipmentFit(plan: EquipmentPlan, result: CalculationResult, project: Project, assumptions: Assumptions, catalog: ProductCatalog) {
+  const system = project.selectedSystem;
+  const sizing = result[system];
+  const actuals = getEquipmentActuals(plan);
+  const controller = plan[system];
+  const installedA = controller.controllerCount * controller.mpptAmps + (system === "hybrid" ? includedMpptAmps(plan, catalog) : 0);
+  const requiredA = requiredControllerAmps(actuals.solarArrayW, project, assumptions);
+  return {
+    excess: capacityExcess(actuals.solarArrayW, sizing.recommendedSolarArrayW) + capacityExcess(actuals.batteryWh, sizing.requiredBatteryWh) + capacityExcess(installedA, requiredA),
+    units: plan.shared.panelCount + plan.shared.batteryCount + controller.controllerCount + (system === "hybrid" ? plan.hybrid.inverterCount : 0),
+    key: [plan.shared.panelProductId, plan.shared.batteryProductId, controller.controllerProductId, system === "hybrid" ? plan.hybrid.inverterProductId : ""].join(":"),
+  };
+}
+
+/** Enumerate fixed-product combinations before applying any price/fit preference. */
+export function generateEquipmentCandidates(result: CalculationResult, defaults: EquipmentDefaults, project: Project, assumptions: Assumptions, catalog: ProductCatalog = defaultCatalog): EquipmentPlan[] {
+  const system = project.selectedSystem;
+  if (result[system].recommendedSolarArrayW <= 0) return [buildEquipmentPlan(result, defaults, project, assumptions, catalog)];
+  const panels = catalog.solarPanels.filter(p => p.watts && p.watts <= safePositive(defaults.panelWatts, 450));
+  const controllers = catalog.chargeControllers.filter(p => p.amps && p.supportedVoltages?.includes(project.systemVoltage));
+  const inverters: Array<ProductItem | undefined> = system === "hybrid" && result.acPeakLoadW > 0
+    ? catalog.hybridInverters.filter(p => !inverterChecks(result, p, project).some(c => c.status === "failed")) : [undefined];
+  const plans: EquipmentPlan[] = [];
+  for (const panel of panels) for (const battery of catalog.batteries) for (const controller of controllers.length ? controllers : [undefined]) for (const inverter of inverters.length ? inverters : [undefined]) {
+    const choices = { ...catalog, solarPanels: [panel], batteries: [battery], chargeControllers: controller ? [controller] : [], hybridInverters: inverter ? [inverter] : [] };
+    const plan = buildEquipmentPlan(result, defaults, project, assumptions, choices);
+    if (!plan.shared.batteryCount || !plan.shared.batteryProductId) continue;
+    const requiredA = requiredControllerAmps(plan.shared.panelCount * plan.shared.panelWatts, project, assumptions);
+    if (plan[system].controllerCount * plan[system].mpptAmps + (system === "hybrid" ? includedMpptAmps(plan, choices) : 0) < requiredA - 1e-8) continue;
+    if (inverter && plan.hybrid.inverterCount !== 1) continue;
+    if (technicalChecks(result, plan, system, project, assumptions, choices).some(c => c.status === "failed")) continue;
+    plans.push(plan);
+  }
+  // Preserve the existing preferred unit sizes and manageable battery-bank preference.
+  let pool = plans;
+  const prefer = (test: (plan: EquipmentPlan) => boolean) => { const preferred = pool.filter(test); if (preferred.length) pool = preferred; };
+  prefer(p => p.shared.batteryVoltage * p.shared.batteryAh <= defaults.batteryVoltage * defaults.batteryAh);
+  prefer(p => p[system].controllerCount === 0 || p[system].mpptAmps <= defaults.mpptAmpStep);
+  prefer(p => p.shared.batteryCount / (batterySeriesCount(project.systemVoltage, p.shared.batteryVoltage) || 1) <= 4);
+  return pool;
+}
+
+export function generateEquipmentPlan(result: CalculationResult, defaults: EquipmentDefaults, project: Project, assumptions: Assumptions, catalog: ProductCatalog = defaultCatalog): EquipmentPlan {
+  const candidates = generateEquipmentCandidates(result, defaults, project, assumptions, catalog).map(plan => ({
+    plan, ...equipmentFit(plan, result, project, assumptions, catalog),
+    equipmentCost: estimateCosts(project, plan, pricingForGeneratedPlan(plan, project.pricing, catalog), assumptions, project.selectedSystem).subtotalUsd,
+  }));
+  return balancedFit(candidates)?.plan ?? buildEquipmentPlan(result, defaults, project, assumptions, { ...catalog, batteries: [], hybridInverters: [] });
 }
 
 export function getEquipmentActuals(plan: EquipmentPlan): EquipmentActuals {

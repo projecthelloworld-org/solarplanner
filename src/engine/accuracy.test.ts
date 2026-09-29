@@ -51,7 +51,7 @@ describe("accuracy review regression cases", () => {
     bundle = getProjectBundle(project, assumptions);
     expect(bundle.result.hybrid.adjustedDailyWh).toBe(1312.5);
     expect(bundle.plan.shared.batteryCount).toBe(2);
-    expect(bundle.evaluation.checks.find((c) => c.label === "MPPT/controller")?.required).toBe(23.4375);
+    expect(bundle.evaluation.checks.find((c) => c.label === "MPPT/controller")?.required).toBeCloseTo(bundle.actuals.solarArrayW / project.systemVoltage * assumptions.mpptSafetyFactor);
   });
   it("does not purchase an extra battery because of display rounding", () => {
     const project = site([load({ hoursPerDay: 10.4 })]);
@@ -69,13 +69,13 @@ describe("accuracy review regression cases", () => {
     expect(bundle.options.hybrid.plan.shared.batteryCount).toBe(2);
     expect(bundle.options.dc.cost.totalUsd).toBeLessThan(bundle.options.hybrid.cost.totalUsd);
     project.optionPlans = { dc: { mode: "custom", equipment: structuredClone(bundle.options.dc.plan), pricingOverrides: { batteryUnitUsd: 123 } }, hybrid: { mode: "generated", pricingOverrides: { batteryUnitUsd: 456 } } };
-    project.optionPlans.dc!.equipment!.shared.panelCount = 7;
+    project.optionPlans.dc!.equipment!.shared.panelCount = 77;
     project.selectedSystem = "dc";
-    expect(getProjectBundle(project, assumptions).plan.shared.panelCount).toBe(7);
+    expect(getProjectBundle(project, assumptions).plan.shared.panelCount).toBe(77);
     expect(getProjectBundle(project, assumptions).pricing.batteryUnitUsd).toBe(123);
     project.selectedSystem = "hybrid";
     expect(getProjectBundle(project, assumptions).pricing.batteryUnitUsd).toBe(456);
-    expect(getProjectBundle(project, assumptions).plan.shared.panelCount).not.toBe(7);
+    expect(getProjectBundle(project, assumptions).plan.shared.panelCount).not.toBe(77);
   });
   it("adds unloaded energy once to hybrid only and distinguishes blank from zero", () => {
     const project = site();
@@ -143,7 +143,8 @@ describe("accuracy review regression cases", () => {
   });
   it("checks charging current and charge/float settings independently", () => {
     const project = site();
-    custom(project, { battery: { maxChargeA: 10 }, controller: { chargeVoltage: 27, floatVoltage: 27 } });
+    const edited = custom(project, { battery: { maxChargeA: 10 }, controller: { chargeVoltage: 27, floatVoltage: 27 } });
+    edited.hybrid.controllerProductId = "mppt-20"; edited.hybrid.controllerCount = 1; edited.hybrid.mpptAmps = 20;
     expect(check(project, "Battery charge current").status).toBe("failed");
     // Use the exact native battery reference, not the smaller generic battery.
     const plan = project.optionPlans!.hybrid!.equipment!;
@@ -175,6 +176,7 @@ describe("accuracy review regression cases", () => {
   it("does not treat a known PV power violation as merely unknown", () => {
     const project = site(); const plan = custom(project);
     plan.shared.panelCount = 20;
+    plan.hybrid.controllerProductId = "mppt-20"; plan.hybrid.controllerCount = 1; plan.hybrid.mpptAmps = 20;
     expect(check(project, "Controller aggregate PV input power").status).toBe("failed");
   });
   it("exports assumptions, precision, check states and manual evidence consistently", () => {

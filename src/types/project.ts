@@ -144,6 +144,7 @@ export interface ProductCatalog {
 }
 
 export interface ProductItem extends ElectricalRatings {
+  referenceKind?: "named" | "representative";
   id: string;
   name: string;
   unit: string;

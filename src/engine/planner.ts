@@ -1,7 +1,8 @@
+import { balancedFit } from "./balanced-fit";
 import { priceDetails, priceIdentity } from "./pricing";
 import { calculateProject } from "./calculations";
 import { estimateCosts } from "./costing";
-import { evaluateEquipmentPlan, generateEquipmentPlan, getEquipmentActuals, isStarterPricing, matchedInverter, pricingForGeneratedPlan } from "./equipment";
+import { evaluateEquipmentPlan, generateEquipmentPlan, generateEquipmentCandidates, equipmentFit, includedMpptAmps, getEquipmentActuals, isStarterPricing, matchedInverter, pricingForGeneratedPlan } from "./equipment";
 import { buildRecommendations } from "./recommendations";
 import { engineeringCheck, engineeringFor, inverterChecks, inverterRequirement, withRatings } from "./engineering";
 import sample from "../data/sample-project.json";
@@ -49,17 +50,21 @@ function optionBundle(project: Project, assumptions: Assumptions, system: System
   const assemble = (inverter?: ProductItem) => {
     const result = system === "hybrid" ? calculated(site, assumptions, inverter, inverter ? 1 : 0) : initial;
     const choices = { ...catalog, hybridInverters: inverter ? [inverter] : [] };
-    const plan = generateEquipmentPlan(result, site.equipmentDefaults, site, assumptions, choices);
-    const pricing = { ...pricingForGeneratedPlan(plan, site.pricing, catalog), ...saved.pricingOverrides };
-    const cost = estimateCosts(site, plan, pricing, assumptions, system);
-    return { result, plan, pricing, cost };
+    return generateEquipmentCandidates(result, site.equipmentDefaults, site, assumptions, choices).map(plan => {
+      const pricing = { ...pricingForGeneratedPlan(plan, site.pricing, catalog), ...saved.pricingOverrides };
+      const cost = estimateCosts(site, plan, pricing, assumptions, system);
+      return { result, plan, pricing, cost, equipmentCost: cost.subtotalUsd, ...equipmentFit(plan, result, site, assumptions, catalog) };
+    });
   };
   const candidates = system === "hybrid" && initial.acPeakLoadW > 0
-    ? catalog.hybridInverters.filter((p) => !inverterChecks(initial, p, site).some((c) => c.status === "failed")).map(assemble)
-      .filter((c) => c.plan.hybrid.inverterCount === 1)
-      .sort((a, b) => a.cost.totalUsd - b.cost.totalUsd || a.plan.hybrid.inverterWatts - b.plan.hybrid.inverterWatts)
-    : [];
-  const generated = candidates[0] ?? assemble();
+    ? catalog.hybridInverters.filter(p => !inverterChecks(initial, p, site).some(c => c.status === "failed")).flatMap(assemble).filter(c => c.plan.hybrid.inverterCount === 1)
+    : assemble();
+  const selected = balancedFit(candidates);
+  const fallbackResult = calculated(site, assumptions);
+  const generated = selected ?? {
+    result: fallbackResult,
+    plan: generateEquipmentPlan(fallbackResult, site.equipmentDefaults, site, assumptions, { ...catalog, hybridInverters: [] }),
+  };
   const plan = saved.mode === "custom" && saved.equipment ? saved.equipment : generated.plan;
   const inverter = system === "hybrid" && plan.hybrid.inverterCount > 0 ? matchedInverter(plan, catalog) : undefined;
   const result = system === "hybrid" ? calculated(site, assumptions, inverter, plan.hybrid.inverterCount) : generated.result;
@@ -80,6 +85,15 @@ function optionBundle(project: Project, assumptions: Assumptions, system: System
     result, plan, generatedPlan: generated.plan, pricing, evaluation, actuals,
     priceDetails: priceDetails(plan, pricing, saved, system, catalog),
     cost: estimateCosts(site, plan, pricing, assumptions, system),
+    selectionExplanation: saved.mode === "custom"
+      ? "Manually edited equipment; compare installed capacities with the requirements below."
+      : selected ? "Balanced fit: closest combined capacity fit within 10% of the lowest eligible equipment cost. Existing reserves are included; missing specifications still require review."
+      : "No complete compatible catalogue combination was found. Unresolved equipment requires a reviewed quotation; the estimate is incomplete.",
+    capacityComparison: [
+      { label: "Solar array", required: result[system].recommendedSolarArrayW, installed: actuals.solarArrayW, unit: "W" },
+      { label: "Battery nominal energy", required: result[system].requiredBatteryWh, installed: actuals.batteryWh, unit: "Wh" },
+      { label: "Controller output (installed array)", required: evaluation.checks.find(c => c.label === "MPPT/controller")!.required, installed: plan[system].controllerCount * plan[system].mpptAmps + (system === "hybrid" ? includedMpptAmps(plan, catalog) : 0), unit: "A" },
+    ].map(c => ({ ...c, excessPercent: c.required > 0 ? (c.installed / c.required - 1) * 100 : undefined })),
     effectiveInverterRequirementW: inverterRequirement(result, inverter),
     usableBatteryWh,
     modeledAutonomyDays: result[system].adjustedDailyWh > 0 ? usableBatteryWh / result[system].adjustedDailyWh : undefined,

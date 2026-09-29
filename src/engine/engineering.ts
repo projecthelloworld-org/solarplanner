@@ -1,7 +1,7 @@
 import type { AdequacyCheck, Assumptions, CalculationResult, ElectricalRatings, EngineeringSettings, EquipmentPlan, ProductCatalog, ProductItem, Project, SystemOptionId } from "../types/project";
 import { startupEvents } from "./calculations";
 
-export const CALCULATION_REVISION = "2.0";
+export const CALCULATION_REVISION = "2.1";
 export const engineeringFor = (project: Project, option: SystemOptionId): EngineeringSettings => project.optionPlans?.[option]?.engineering ?? {};
 export function withRatings<T extends ElectricalRatings>(base: T | undefined, override?: ElectricalRatings): T & ElectricalRatings {
   return { ...base, ...Object.fromEntries(Object.entries(override ?? {}).filter(([, v]) => v !== undefined)) } as T & ElectricalRatings;

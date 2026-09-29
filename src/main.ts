@@ -31,10 +31,10 @@ import { decimalFormat, formatEnergy, integerFormat, money, moneyUsd, selectedSy
 const app = document.querySelector<HTMLDivElement>("#app");
 const catalog = productsData as ProductCatalog;
 
-function productSelect(label: string, category: "batteries" | "hybridInverters" | "chargeControllers", selection: string | undefined, target: string) {
+function productSelect(label: string, category: "solarPanels" | "batteries" | "hybridInverters" | "chargeControllers", selection: string | undefined, target: string) {
   return `<label><span>${label}</span><select data-product-target="${target}" data-product-category="${category}">
     <option value="" ${selection ? "" : "selected"}>Custom / unverified</option>
-    ${catalog[category].map((item) => `<option value="${attribute(item.id)}" ${selection === item.id ? "selected" : ""}>${escapeHtml(item.name)} (${moneyUsd(item.unitCost)})</option>`).join("")}
+    ${catalog[category].map((item) => `<option value="${attribute(item.id)}" ${selection === item.id ? "selected" : ""}>${item.voltage ? `${item.voltage} V ${item.ampHours} Ah` : item.amps ? `${item.amps} A (${item.supportedVoltages?.join("/") ?? "unknown"} V)` : `${item.watts} W`} · ${moneyUsd(item.unitCost)} — ${escapeHtml(item.name)}${item.referenceKind === "representative" ? " (size estimate)" : ""}</option>`).join("")}
   </select></label>`;
 }
 
@@ -278,7 +278,7 @@ function renderSideControls(project: Project, plan: EquipmentPlan, evaluations: 
         <button type="button" data-reset-equipment>Use generated values</button>
       </div>
 
-      <p class="comparison-note pricing-note">Generated plans select a practical regional product size for the load. Prices are editable USD allowances; entering a quote preserves it until changed.</p>
+      <p class="comparison-note pricing-note">Generated plans balance capacity fit and complete equipment cost, within 10% of the cheapest eligible combination. Prices are editable USD allowances; entering a quote preserves it until changed.</p>
       <div class="accordion-list">
         <details>
           ${accordionSummary("Currency", `1 USD in ${project.currency}`, `${project.currency}`, "currency")}
@@ -296,6 +296,7 @@ function renderSideControls(project: Project, plan: EquipmentPlan, evaluations: 
         <details open>
           ${accordionSummary("Solar Panels", `${plan.shared.panelCount} panels x ${plan.shared.panelWatts} W`, `${moneyUsd(plan.shared.panelCount * pricing.panelUnitUsd)} total`, "solar")}
           <div class="accordion-body mini-grid">
+            ${productSelect("Panel reference", "solarPanels", plan.shared.panelProductId, "panel")}
             ${hardwareInput("Panels", "shared", "panelCount", plan.shared.panelCount)}
             ${hardwareInput("Watts each", "shared", "panelWatts", plan.shared.panelWatts)}
             ${priceControl("Price per panel", "panelUnitUsd", pricing.panelUnitUsd)}
@@ -514,6 +515,8 @@ function renderPlanner(project: Project) {
                       ${option.id === "hybrid" ? `<div><dt>Inverter requirement</dt><dd>${decimalFormat.format(sizing.recommendedInverterW)} W</dd></div>` : ""}
                       <div><dt>Total planning estimate</dt><dd>${money(estimate.total, project)}</dd></div>
                     </dl>
+                    <p class="comparison-note">${escapeHtml(options[option.id].selectionExplanation)}</p>
+                    <details class="capacity-fit"><summary>Required and installed capacity</summary><ul>${options[option.id].capacityComparison.map(c => `<li><strong>${escapeHtml(c.label)}</strong>: ${decimalFormat.format(c.required)} ${c.unit} required; ${decimalFormat.format(c.installed)} ${c.unit} installed; ${c.excessPercent === undefined ? "no active requirement" : `${decimalFormat.format(c.excessPercent)}% ${c.excessPercent < 0 ? "shortfall" : "excess"}`}</li>`).join("")}</ul></details>
                     <details class="cost-breakdown"><summary>Equipment and cost breakdown</summary>
                       <ul>${estimate.lines.map((line, index) => `<li><strong>${escapeHtml(line.category)}</strong><span>${escapeHtml(line.description)}</span><span>${line.quantity} × ${moneyUsd(line.unitCostUsd)} = ${moneyUsd(line.totalUsd)}</span><span>${escapeHtml(options[option.id].priceDetails[index]?.basis ?? "Unverified allowance")}</span>${options[option.id].priceDetails[index]?.note ? `<span class="price-review">${escapeHtml(options[option.id].priceDetails[index].note)}</span>` : ""}</li>`).join("")}</ul>
                       <p>Equipment subtotal: ${money(estimate.subtotal, project)}</p><p>Installation: ${money(estimate.installation, project)}</p><p>Contingency: ${money(estimate.contingency, project)}</p><p><strong>Total: ${money(estimate.total, project)}</strong></p>
@@ -864,7 +867,10 @@ function bindEvents() {
       project.pricing = { ...bundle.pricing };
       const item = catalog[select.dataset.productCategory as keyof ProductCatalog].find((product) => product.id === select.value);
       const target = select.dataset.productTarget;
-      if (target === "battery") {
+      if (target === "panel") {
+        plan.shared.panelProductId = item?.id;
+        if (item) { plan.shared.panelWatts = item.watts!; project.pricing.panelUnitUsd = item.unitCost; }
+      } else if (target === "battery") {
         plan.shared.batteryProductId = item?.id;
         if (item) { plan.shared.batteryVoltage = item.voltage!; plan.shared.batteryAh = item.ampHours!; project.pricing.batteryUnitUsd = item.unitCost; }
       } else if (target === "inverter") {
@@ -888,9 +894,9 @@ function bindEvents() {
         }
       }
       const selected = optionState(project, project.selectedSystem);
-      const group = target === "battery" ? "battery" : target === "inverter" ? "inverter" : "controller";
+      const group = target === "panel" ? "panel" : target === "battery" ? "battery" : target === "inverter" ? "inverter" : "controller";
       selected.engineering = { ...selected.engineering, [group]: undefined };
-      const priceField: keyof PricingSettings = target === "battery" ? "batteryUnitUsd" : target === "inverter" ? "inverterUnitUsd" : target === "dc" ? "controllerUnitUsd" : "hybridControllerUnitUsd";
+      const priceField: keyof PricingSettings = target === "panel" ? "panelUnitUsd" : target === "battery" ? "batteryUnitUsd" : target === "inverter" ? "inverterUnitUsd" : target === "dc" ? "controllerUnitUsd" : "hybridControllerUnitUsd";
       delete selected.pricingOverrides[priceField];
       if (selected.quoteEquipment) delete selected.quoteEquipment[priceField];
       project.optionPlans = { ...project.optionPlans, [project.selectedSystem]: selected };
