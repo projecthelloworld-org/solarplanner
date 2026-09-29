@@ -1,3 +1,4 @@
+import { priceIdentity } from "./engine/pricing";
 import "./styles.css";
 import solarPlannerLogoUrl from "./assets/solar_planner_logo.svg";
 import brandProfilesData from "./data/brand-profiles.json";
@@ -8,7 +9,7 @@ import { loadAdvancedFields, loadFieldApplies } from "./engine/fields";
 import { engineeringFor } from "./engine/engineering";
 import { inverterDescription, requiredControllerAmps, supplementaryControllers } from "./engine/equipment";
 import productsData from "./data/default-products.json";
-import { getProjectBundle, optionState } from "./engine/planner";
+import { getProjectBundle, optionState, regenerateEquipment } from "./engine/planner";
 import { validateAssumptions, validateEngineering, validateEquipmentPlan, validateProject, type ValidationIssue } from "./engine/validation";
 import { createCsvObjectUrl } from "./exports/csv";
 import { buildProjectCsv, projectCsvFilename, renderProjectReport } from "./exports/project-report";
@@ -262,6 +263,11 @@ function accordionSummary(title: string, summary: string, amount = "", iconLabel
 }
 
 function renderSideControls(project: Project, plan: EquipmentPlan, evaluations: { dc: EquipmentEvaluation; hybrid: EquipmentEvaluation }, generatedPlan: EquipmentPlan, pricing: PricingSettings, refs: ReturnType<typeof getProjectBundle>["products"]) {
+  const details = getProjectBundle(project, state.assumptions).priceDetails;
+  const priceControl = (label: string, field: keyof PricingSettings, value: number) => {
+    const detail = details.find(p => p.field === field);
+    return priceInput(label, field, value) + (detail ? `<div class="price-basis"><strong>${detail.quantity} × ${moneyUsd(detail.unitUsd)} = ${moneyUsd(detail.totalUsd)}</strong><span>${escapeHtml(detail.basis)}</span>${detail.note ? `<span class="price-review">${escapeHtml(detail.note)}</span>` : ""}${detail.overridden ? `<button type="button" data-reset-price="${field}">Use reference price</button>` : ""}</div>` : "");
+  };
   return `
     <section class="panel equipment-panel">
       <div class="panel-title-row">
@@ -288,50 +294,50 @@ function renderSideControls(project: Project, plan: EquipmentPlan, evaluations: 
         </details>
 
         <details open>
-          ${accordionSummary("Solar Panels", `${plan.shared.panelCount} panels x ${plan.shared.panelWatts} W`, `${moneyUsd(pricing.panelUnitUsd)} each`, "solar")}
+          ${accordionSummary("Solar Panels", `${plan.shared.panelCount} panels x ${plan.shared.panelWatts} W`, `${moneyUsd(plan.shared.panelCount * pricing.panelUnitUsd)} total`, "solar")}
           <div class="accordion-body mini-grid">
             ${hardwareInput("Panels", "shared", "panelCount", plan.shared.panelCount)}
             ${hardwareInput("Watts each", "shared", "panelWatts", plan.shared.panelWatts)}
-            ${priceInput("Price per panel", "panelUnitUsd", pricing.panelUnitUsd)}
+            ${priceControl("Price per panel", "panelUnitUsd", pricing.panelUnitUsd)}
           </div>
           <p class="comparison-note">Generated: ${generatedPlan.shared.panelCount} panel(s) x ${generatedPlan.shared.panelWatts} W. Current array: ${integerFormat.format(plan.shared.panelCount * plan.shared.panelWatts)} W.</p>
         </details>
 
         <details>
-          ${accordionSummary("Batteries", `${plan.shared.batteryCount} batteries x ${plan.shared.batteryVoltage} V ${plan.shared.batteryAh} Ah`, `${moneyUsd(pricing.batteryUnitUsd)} each`, "battery")}
+          ${accordionSummary("Batteries", `${plan.shared.batteryCount} batteries x ${plan.shared.batteryVoltage} V ${plan.shared.batteryAh} Ah`, `${moneyUsd(plan.shared.batteryCount * pricing.batteryUnitUsd)} total`, "battery")}
           <div class="accordion-body mini-grid">
             ${productSelect("Battery reference", "batteries", plan.shared.batteryProductId, "battery")}
             ${hardwareInput("Batteries", "shared", "batteryCount", plan.shared.batteryCount)}
             ${hardwareInput("Voltage", "shared", "batteryVoltage", plan.shared.batteryVoltage)}
             ${hardwareInput("Ah each", "shared", "batteryAh", plan.shared.batteryAh)}
-            ${priceInput("Price per battery", "batteryUnitUsd", pricing.batteryUnitUsd)}
+            ${priceControl("Price per battery", "batteryUnitUsd", pricing.batteryUnitUsd)}
           </div>
           <p class="comparison-note">Generated: ${generatedPlan.shared.batteryCount} battery/batteries x ${generatedPlan.shared.batteryVoltage} V x ${generatedPlan.shared.batteryAh} Ah. Current storage: ${formatEnergy(plan.shared.batteryCount * plan.shared.batteryVoltage * plan.shared.batteryAh)}.</p>
           <p class="comparison-note">${escapeHtml(productPriceNote("batteries", plan.shared.batteryProductId))}</p>
         </details>
 
         <details ${project.selectedSystem !== "dc" ? "hidden" : ""}>
-          ${accordionSummary("DC Controller", `${plan.dc.controllerCount} controller, ${plan.dc.mpptAmps} A`, `${moneyUsd(pricing.controllerUnitUsd)} each`, "controller")}
+          ${accordionSummary("DC Controller", `${plan.dc.controllerCount} controller, ${plan.dc.mpptAmps} A`, `${moneyUsd(plan.dc.controllerCount * pricing.controllerUnitUsd)} total`, "controller")}
           <div class="accordion-body mini-grid">
             ${productSelect("Controller reference", "chargeControllers", plan.dc.controllerProductId, "dc")}
             ${hardwareInput("Controllers", "dc", "controllerCount", plan.dc.controllerCount)}
             ${hardwareInput("MPPT amps", "dc", "mpptAmps", plan.dc.mpptAmps)}
-            ${priceInput("Price per controller", "controllerUnitUsd", pricing.controllerUnitUsd)}
+            ${priceControl("Price per controller", "controllerUnitUsd", pricing.controllerUnitUsd)}
           </div>
           ${renderWarnings(evaluations.dc)}
         </details>
 
         <details ${project.selectedSystem !== "hybrid" ? "hidden" : ""}>
-          ${accordionSummary("Hybrid Inverter", `${plan.hybrid.inverterCount} inverter, ${plan.hybrid.inverterWatts} W`, `${moneyUsd(pricing.inverterUnitUsd)} each`, "inverter")}
+          ${accordionSummary("Hybrid Inverter", `${plan.hybrid.inverterCount} inverter, ${plan.hybrid.inverterWatts} W`, `${moneyUsd(plan.hybrid.inverterCount * pricing.inverterUnitUsd + plan.hybrid.controllerCount * (pricing.hybridControllerUnitUsd ?? pricing.controllerUnitUsd))} total`, "inverter")}
           <div class="accordion-body mini-grid">
             ${productSelect("Inverter reference", "hybridInverters", plan.hybrid.inverterProductId, "inverter")}
             ${productSelect("Separate controller reference", "chargeControllers", plan.hybrid.controllerProductId, "hybrid")}
             ${hardwareInput("Controllers", "hybrid", "controllerCount", plan.hybrid.controllerCount)}
             ${hardwareInput("MPPT amps", "hybrid", "mpptAmps", plan.hybrid.mpptAmps)}
-            ${priceInput("Price per separate controller", "hybridControllerUnitUsd", pricing.hybridControllerUnitUsd ?? pricing.controllerUnitUsd)}
+            ${priceControl("Price per separate controller", "hybridControllerUnitUsd", pricing.hybridControllerUnitUsd ?? pricing.controllerUnitUsd)}
             ${hardwareInput("Inverters", "hybrid", "inverterCount", plan.hybrid.inverterCount)}
             ${hardwareInput("Watts each", "hybrid", "inverterWatts", plan.hybrid.inverterWatts)}
-            ${priceInput("Price per inverter", "inverterUnitUsd", pricing.inverterUnitUsd)}
+            ${priceControl("Price per inverter", "inverterUnitUsd", pricing.inverterUnitUsd)}
           </div>
           <p class="comparison-note">${escapeHtml(inverterDescription(plan))}</p>
           <p class="comparison-note">${escapeHtml(productPriceNote("hybridInverters", plan.hybrid.inverterProductId))}</p>
@@ -339,42 +345,42 @@ function renderSideControls(project: Project, plan: EquipmentPlan, evaluations: 
         </details>
 
         <details>
-          ${accordionSummary("DC Distribution", `${plan.balance.dcDistributionCount} set`, moneyUsd(pricing.dcDistributionUnitUsd), "dcDist")}
+          ${accordionSummary("DC Distribution", `${plan.balance.dcDistributionCount} set`, `${moneyUsd(plan.balance.dcDistributionCount * pricing.dcDistributionUnitUsd)} total`, "dcDist")}
           <div class="accordion-body mini-grid">
             ${hardwareInput("Quantity", "balance", "dcDistributionCount", plan.balance.dcDistributionCount)}
-            ${priceInput("Price per set", "dcDistributionUnitUsd", pricing.dcDistributionUnitUsd)}
+            ${priceControl("Price per set", "dcDistributionUnitUsd", pricing.dcDistributionUnitUsd)}
           </div>
         </details>
 
         <details>
-          ${accordionSummary("AC Distribution", `${plan.balance.acDistributionCount} set`, moneyUsd(pricing.acDistributionUnitUsd), "acDist")}
+          ${accordionSummary("AC Distribution", `${plan.balance.acDistributionCount} set`, `${moneyUsd(plan.balance.acDistributionCount * pricing.acDistributionUnitUsd)} total`, "acDist")}
           <div class="accordion-body mini-grid">
             ${hardwareInput("Quantity", "balance", "acDistributionCount", plan.balance.acDistributionCount)}
-            ${priceInput("Price per set", "acDistributionUnitUsd", pricing.acDistributionUnitUsd)}
+            ${priceControl("Price per set", "acDistributionUnitUsd", pricing.acDistributionUnitUsd)}
           </div>
         </details>
 
         <details>
-          ${accordionSummary("Cabling", `${plan.balance.cablingCount} kit`, moneyUsd(pricing.cablingUnitUsd), "cabling")}
+          ${accordionSummary("Cabling", `${plan.balance.cablingCount} kit`, `${moneyUsd(plan.balance.cablingCount * pricing.cablingUnitUsd)} total`, "cabling")}
           <div class="accordion-body mini-grid">
             ${hardwareInput("Quantity", "balance", "cablingCount", plan.balance.cablingCount)}
-            ${priceInput("Price per kit", "cablingUnitUsd", pricing.cablingUnitUsd)}
+            ${priceControl("Price per kit", "cablingUnitUsd", pricing.cablingUnitUsd)}
           </div>
         </details>
 
         <details>
-          ${accordionSummary("Earthing", `${plan.balance.earthingCount} kit`, moneyUsd(pricing.earthingUnitUsd), "earthing")}
+          ${accordionSummary("Earthing", `${plan.balance.earthingCount} kit`, `${moneyUsd(plan.balance.earthingCount * pricing.earthingUnitUsd)} total`, "earthing")}
           <div class="accordion-body mini-grid">
             ${hardwareInput("Quantity", "balance", "earthingCount", plan.balance.earthingCount)}
-            ${priceInput("Price per kit", "earthingUnitUsd", pricing.earthingUnitUsd)}
+            ${priceControl("Price per kit", "earthingUnitUsd", pricing.earthingUnitUsd)}
           </div>
         </details>
 
         <details>
-          ${accordionSummary("Monitoring", `${plan.balance.monitoringCount} kit`, moneyUsd(pricing.monitoringUnitUsd), "monitoring")}
+          ${accordionSummary("Monitoring", `${plan.balance.monitoringCount} kit`, `${moneyUsd(plan.balance.monitoringCount * pricing.monitoringUnitUsd)} total`, "monitoring")}
           <div class="accordion-body mini-grid">
             ${hardwareInput("Quantity", "balance", "monitoringCount", plan.balance.monitoringCount)}
-            ${priceInput("Price per kit", "monitoringUnitUsd", pricing.monitoringUnitUsd)}
+            ${priceControl("Price per kit", "monitoringUnitUsd", pricing.monitoringUnitUsd)}
           </div>
         </details>
 
@@ -423,7 +429,7 @@ function renderWarnings(evaluation: EquipmentEvaluation) {
 }
 
 function renderPlanner(project: Project) {
-  const { result, generatedPlan, plan, evaluations, costs, recommendations, pricing, products: refs } = getProjectBundle(project, state.assumptions);
+  const { result, generatedPlan, plan, evaluations, costs, recommendations, pricing, products: refs, options } = getProjectBundle(project, state.assumptions);
   const [dcCost, hybridCost] = costs;
   const selectedSystem = selectedSystemFor(project);
 
@@ -454,6 +460,7 @@ function renderPlanner(project: Project) {
             </div>
           </div>
           <div class="validation-summary" data-validation-summary role="alert" tabindex="-1" hidden></div>
+          <p class="comparison-note">Calculate updates loads and regenerates equipment for both options, replacing manual equipment edits. Entered quotations are retained; review them if equipment changes.</p>
           <p class="comparison-note" data-load-status role="status" aria-live="polite"></p>
           <div class="table-wrap" tabindex="0" role="region" aria-label="Load table, scroll horizontally for more columns">
             <table class="editable-table">
@@ -492,7 +499,7 @@ function renderPlanner(project: Project) {
                   <article class="option-card ${isSelected ? "selected-option" : ""}">
                     <div class="card-heading">
                       <div>
-                        <h2>${option.name}</h2>
+                        <h2>${option.name}</h2><span class="plan-mode">${optionState(project, option.id).mode === "custom" ? "Manually edited equipment" : "Generated equipment"}</span>
                         ${isSelected ? `<span class="report-choice">Included in report</span>` : ""}
                       </div>
                       ${formatStatus(evaluation)}
@@ -501,11 +508,16 @@ function renderPlanner(project: Project) {
                     <dl>
                       <div><dt>Adjusted energy</dt><dd>${formatEnergy(sizing.adjustedDailyWh)}</dd></div>
                       <div><dt>Battery requirement</dt><dd>${formatEnergy(sizing.requiredBatteryWh)}</dd></div>
-                      <div><dt>Solar requirement</dt><dd>${decimalFormat.format(sizing.recommendedSolarArrayW)} W</dd></div>
-                      <div><dt>MPPT requirement</dt><dd>${decimalFormat.format(evaluation.checks.find((check) => check.label === "MPPT/controller")!.required)} A</dd></div>
+                      <div><dt>Required solar capacity</dt><dd>${decimalFormat.format(sizing.recommendedSolarArrayW)} W</dd></div>
+                      <div><dt>Installed solar capacity</dt><dd>${decimalFormat.format(options[option.id].actuals.solarArrayW)} W (${options[option.id].plan.shared.panelCount} panels)</dd></div>
+                      <div><dt>Controller requirement (covers installed array)</dt><dd>${decimalFormat.format(evaluation.checks.find((check) => check.label === "MPPT/controller")!.required)} A</dd></div>
                       ${option.id === "hybrid" ? `<div><dt>Inverter requirement</dt><dd>${decimalFormat.format(sizing.recommendedInverterW)} W</dd></div>` : ""}
                       <div><dt>Total planning estimate</dt><dd>${money(estimate.total, project)}</dd></div>
                     </dl>
+                    <details class="cost-breakdown"><summary>Equipment and cost breakdown</summary>
+                      <ul>${estimate.lines.map((line, index) => `<li><strong>${escapeHtml(line.category)}</strong><span>${escapeHtml(line.description)}</span><span>${line.quantity} × ${moneyUsd(line.unitCostUsd)} = ${moneyUsd(line.totalUsd)}</span><span>${escapeHtml(options[option.id].priceDetails[index]?.basis ?? "Unverified allowance")}</span>${options[option.id].priceDetails[index]?.note ? `<span class="price-review">${escapeHtml(options[option.id].priceDetails[index].note)}</span>` : ""}</li>`).join("")}</ul>
+                      <p>Equipment subtotal: ${money(estimate.subtotal, project)}</p><p>Installation: ${money(estimate.installation, project)}</p><p>Contingency: ${money(estimate.contingency, project)}</p><p><strong>Total: ${money(estimate.total, project)}</strong></p>
+                    </details>
                     ${renderWarnings(evaluation)}
                     <details class="planning-notes"><summary>Planning notes</summary><ul>${evaluation.notes.map((note) => `<li>${escapeHtml(note)}</li>`).join("")}</ul></details>
                   </article>
@@ -755,7 +767,8 @@ function bindEvents() {
   document.querySelector("[data-calculate-loads]")?.addEventListener("click", () => {
     const pending = document.querySelector<HTMLInputElement>("[data-pending]");
     if (pending) { pending.focus(); pending.reportValidity(); return; }
-    const project = clone(activeProject());
+    let project = clone(activeProject());
+    const previous = getProjectBundle(project, state.assumptions);
     project.loads = collectLoadTable(project);
     const issues = [...validateProject(project), ...validateAssumptions(state.assumptions)];
     if (issues.length > 0) {
@@ -763,6 +776,7 @@ function bindEvents() {
       return;
     }
     showValidationIssues([]);
+    project = regenerateEquipment(project, state.assumptions, previous);
     loadDrafts.delete(project.id);
     const uiState = captureEquipmentUiState();
     setActiveProject(project);
@@ -827,6 +841,14 @@ function bindEvents() {
         target.reportValidity();
         return;
       }
+      const ratingGroup = section === "shared" && ["batteryVoltage", "batteryAh"].includes(field) ? "battery"
+        : section === "shared" && field === "panelWatts" ? "panel"
+        : field === "mpptAmps" ? "controller" : field === "inverterWatts" ? "inverter" : undefined;
+      if (ratingGroup) {
+        const selected = optionState(project, project.selectedSystem);
+        selected.engineering = { ...selected.engineering, [ratingGroup]: undefined };
+        project.optionPlans = { ...project.optionPlans, [project.selectedSystem]: selected };
+      }
       saveOptionEquipment(project, plan);
       setActiveProject(project, true);
     };
@@ -868,6 +890,9 @@ function bindEvents() {
       const selected = optionState(project, project.selectedSystem);
       const group = target === "battery" ? "battery" : target === "inverter" ? "inverter" : "controller";
       selected.engineering = { ...selected.engineering, [group]: undefined };
+      const priceField: keyof PricingSettings = target === "battery" ? "batteryUnitUsd" : target === "inverter" ? "inverterUnitUsd" : target === "dc" ? "controllerUnitUsd" : "hybridControllerUnitUsd";
+      delete selected.pricingOverrides[priceField];
+      if (selected.quoteEquipment) delete selected.quoteEquipment[priceField];
       project.optionPlans = { ...project.optionPlans, [project.selectedSystem]: selected };
       saveOptionEquipment(project, plan);
       setActiveProject(project, true);
@@ -903,12 +928,22 @@ function bindEvents() {
       const field = target.dataset.pricingField as keyof PricingSettings;
       project.pricing[field] = Number(target.value);
       const selected = optionState(project, project.selectedSystem);
-      project.optionPlans = { ...project.optionPlans, [project.selectedSystem]: { ...selected, pricingOverrides: { ...selected.pricingOverrides, [field]: Number(target.value) } } };
+      project.optionPlans = { ...project.optionPlans, [project.selectedSystem]: { ...selected, pricingOverrides: { ...selected.pricingOverrides, [field]: Number(target.value) }, quoteEquipment: { ...selected.quoteEquipment, [field]: priceIdentity(getProjectBundle(project, state.assumptions).plan, field) } } };
       setActiveProject(project, true);
     };
 
     inputElement.addEventListener("change", updatePricing);
   });
+
+  document.querySelectorAll<HTMLButtonElement>("[data-reset-price]").forEach(button => button.addEventListener("click", () => {
+    const project = clone(activeProject());
+    const selected = optionState(project, project.selectedSystem);
+    const field = button.dataset.resetPrice as keyof PricingSettings;
+    delete selected.pricingOverrides[field];
+    if (selected.quoteEquipment) delete selected.quoteEquipment[field];
+    project.optionPlans = { ...project.optionPlans, [project.selectedSystem]: selected };
+    setActiveProject(project, true);
+  }));
 
   const advancedFailure = (target: HTMLInputElement | HTMLSelectElement, message: string) => {
     target.setAttribute("data-pending", "true"); target.setAttribute("aria-invalid", "true");

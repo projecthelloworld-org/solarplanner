@@ -9,7 +9,7 @@ The planner compares two options:
 
 Each option has its own equipment, prices and checks. Your appliance values remain the basis of the estimate.
 
-Current release: **v1.3.1**. Read the [release notes](docs/RELEASE_NOTES_v1.3.1.md) for changes and existing-project guidance.
+Current release: **v1.3.2**. Read the [release notes](docs/RELEASE_NOTES_v1.3.2.md) for changes and existing-project guidance.
 
 ## Get Started
 
@@ -42,11 +42,13 @@ A plan remains exportable when equipment information is incomplete. **Needs atte
 | --- | --- |
 | [User manual](USER_MANUAL.md) | Entering loads, editing equipment, saving projects and sharing reports |
 | [Calculation guide](docs/CALCULATIONS.md) | Formulas, loss factors, equipment selection and model limits |
-| [Pricing guide](docs/PRICING.md) | Dated regional price allowances and how to use local quotations |
+| [Pricing guide](docs/PRICING.md) | African market planning estimates and local quotations |
 | [Roadmap](ROADMAP.md) | Planned improvements and contribution opportunities |
 | [Release history](CHANGELOG.md) | Changes in published releases |
 
-The default prices are dated regional planning allowances. Replace them with current local quotations before procurement. The planner provides estimates; final design and installation require review by a qualified solar or electrical technician.
+Prices are indicative African market planning estimates. A ±10% variation around the listed estimates may be used for initial budgeting; this is a planning assumption, not a measured market range or a verified comparison with global averages. Actual costs may fall outside this range. Confirm current local quotations before procurement.
+
+The optional ±10% range does not automatically change planner totals. It is separate from the existing contingency allowance; do not add it again as a contingency for the same cost uncertainty. See the [pricing guide](docs/PRICING.md) for details. Final design and installation require review by a qualified solar or electrical technician.
 
 ## Your Data
 

@@ -118,8 +118,8 @@ export function isStarterPricing(pricing: PricingSettings): boolean {
 }
 
 export function pricingForGeneratedPlan(plan: EquipmentPlan, fallback: PricingSettings, catalog: ProductCatalog = defaultCatalog): PricingSettings {
-  const panel = catalog.solarPanels.find((item) => item.id === plan.shared.panelProductId);
-  const battery = catalog.batteries.find((item) => item.id === plan.shared.batteryProductId);
+  const panel = catalog.solarPanels.find((item) => item.id === plan.shared.panelProductId && item.watts === plan.shared.panelWatts);
+  const battery = catalog.batteries.find((item) => item.id === plan.shared.batteryProductId && item.voltage === plan.shared.batteryVoltage && item.ampHours === plan.shared.batteryAh);
   const controllerAmps = plan.dc.mpptAmps || plan.hybrid.mpptAmps;
   const controller = catalog.chargeControllers.find((item) => item.id === plan.dc.controllerProductId && item.amps === controllerAmps);
   const hybridController = catalog.chargeControllers.find((item) => item.id === plan.hybrid.controllerProductId && item.amps === plan.hybrid.mpptAmps);

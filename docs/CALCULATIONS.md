@@ -25,7 +25,7 @@ Short-term inverter capacity is credited only when W, VA and duration cover the 
 
 ## Independent equipment plans
 
-DC and hybrid each have generated or edited equipment and independent price overrides. Each hybrid inverter is assessed using its own efficiency and the resulting cost of panels, batteries, controllers and accessories. Panel and battery choices balance price with practical quantities: fewer units may be preferred when their cost is within 30% of the cheapest choice.
+DC and hybrid each have generated or edited equipment and independent price overrides. Calculate regenerates both options; quantity edits update costs immediately. Selecting another named product applies its reference price. Retained quotations are flagged when their equipment changes or their original reference is unknown. Each hybrid inverter is assessed using its own efficiency and the resulting cost of panels, batteries, controllers and accessories. Panel and battery choices balance price with practical quantities: fewer units may be preferred when their cost is within 30% of the cheapest choice.
 
 Battery counts cover energy and documented running/starting/charging limits. Native-voltage units or documented complete series strings are required; parallel approval is not invented. Current screening uses documented minimum operating voltage where available. Nominal-voltage screening cannot establish a pass without that minimum. Continuous operating ratings, timed maxima and BMS trip thresholds are distinct concepts.
 

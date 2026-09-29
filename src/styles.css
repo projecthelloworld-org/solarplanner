@@ -1393,3 +1393,14 @@ summary:focus-visible { outline-offset: -3px; }
 }
 
 .load-advanced label[hidden] { display: none; }
+
+.price-basis { display: grid; gap: .35rem; grid-column: 1 / -1; font-size: .8rem; overflow-wrap: anywhere; }
+.price-basis button { justify-self: start; }
+.price-review { color: #805510; }
+.plan-mode { display: block; font-size: .8rem; color: #586c69; margin: .4rem 0; }
+.cost-breakdown { margin: 1rem 0; font-size: .85rem; }
+.cost-breakdown summary { cursor: pointer; font-weight: 650; }
+.cost-breakdown ul { list-style: none; padding: 0; }
+.cost-breakdown li { display: grid; gap: .3rem; padding: .7rem 0; border-bottom: 1px solid #dbe4e2; overflow-wrap: anywhere; }
+
+.option-card dd { white-space: nowrap; }

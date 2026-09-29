@@ -8,6 +8,15 @@ The project follows [Semantic Versioning](https://semver.org/). Release tags use
 
 Use this section for changes that have not yet been included in a tagged release.
 
+## 1.3.2 - 2026-09-29
+
+- Clarify equipment line totals, price sources and independent option cost breakdowns.
+- Regenerate both equipment options on Calculate while preserving quotations and flagging changed equipment.
+- Add individual reference-price resets and consistent PDF/CSV price evidence.
+- Broaden pricing guidance to indicative African market planning estimates.
+
+See the [release notes](docs/RELEASE_NOTES_v1.3.2.md) for the updated Calculate behavior.
+
 ## 1.3.1 - 2026-09-29
 
 - Show advanced load fields appropriate to each appliance's AC/DC type.

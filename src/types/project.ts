@@ -47,6 +47,7 @@ export interface OptionPlanState {
   mode: EquipmentPlanMode;
   equipment?: EquipmentPlan;
   pricingOverrides: Partial<PricingSettings>;
+  quoteEquipment?: Partial<Record<keyof PricingSettings, string>>;
   engineering?: EngineeringSettings;
 }
 

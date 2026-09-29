@@ -7,6 +7,7 @@ These documents support development, testing and operations. Planner users shoul
 - [Architecture](../ARCHITECTURE.md): modules, data flow and saved-project handling
 - [Calculation validation](CALCULATION_VALIDATION.md): regression examples and saved-project upgrades
 - [Historical accuracy review](ACCURACY_REVIEW_2026-09-29.md): evidence and findings before the calculation update
+- [Pricing evidence](PRICING_EVIDENCE.md): original observations, sources, currencies and dates
 - [Pricing maintenance](PRICING_UPDATES.md): updating catalogue evidence and reference exports
 - [Deployment](../DEPLOYMENT.md) and [PHW hosting](../PHW_DEPLOYMENT.md): installation and operations
 - [Release procedure](../RELEASING.md): versioning and release checks
