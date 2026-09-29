@@ -422,7 +422,7 @@ function renderSideControls(project: Project, plan: EquipmentPlan, evaluations: 
 function renderWarnings(evaluation: EquipmentEvaluation) {
   return `<div class="check-summary">
     ${evaluation.warnings.length ? `<strong>Failed checks</strong><ul class="warning-list">${evaluation.warnings.map((w)=>`<li>${escapeHtml(w)}</li>`).join("")}</ul>` : ""}
-    ${evaluation.unverified?.length ? `<strong>Unverified checks</strong><ul class="unverified-list">${evaluation.unverified.map((w)=>`<li>${escapeHtml(w)}</li>`).join("")}</ul>` : ""}
+    ${evaluation.unverified?.length ? `<details class="check-details unverified-checks"><summary>Unverified checks (${evaluation.unverified.length})</summary><ul class="unverified-list">${evaluation.unverified.map((w)=>`<li>${escapeHtml(w)}</li>`).join("")}</ul></details>` : ""}
     <details class="check-details"><summary>All equipment checks</summary><ul>${evaluation.checks.map((c)=>`<li><strong>${c.status ?? (c.passed ? "passed" : "failed")}</strong> — ${escapeHtml(c.label)}${c.detail ? `: ${escapeHtml(c.detail)}` : ""}</li>`).join("")}</ul></details>
     ${evaluation.status === "Preliminary checks met" ? '<p class="pass-note">All applicable modeled checks passed. This remains a planning estimate.</p>' : ""}
     </div>`;
