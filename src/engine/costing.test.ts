@@ -59,8 +59,8 @@ describe("cost estimates", () => {
     project.equipmentPlanMode = "generated";
     const bundle = getProjectBundle(project, assumptionsData);
     expect(bundle.pricing.batteryUnitUsd).toBe(180);
-    expect(bundle.pricing.controllerUnitUsd).toBe(50);
+    expect(bundle.pricing.controllerUnitUsd).toBe(80);
     expect(bundle.pricing.dcDistributionUnitUsd).toBe(40);
-    expect(bundle.costs[0].totalUsd).toBe(580.58);
+    expect(bundle.costs[0].totalUsd).toBe(631.62);
   });
 });

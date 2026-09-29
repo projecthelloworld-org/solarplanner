@@ -88,7 +88,7 @@ Both options remain available for comparison. Each has independent equipment, en
 
 Open **Equipment & pricing** to review panels, batteries, controllers, inverters and supporting items such as cabling, distribution, earthing and monitoring.
 
-You can select an equipment reference or enter quantities and capacities manually. Selecting a different named product uses its reference price and clears the previous price override for that item. Quantity edits update line totals immediately while keeping the unit price. Changing a capacity directly may leave the item without a verified matching specification. Check its status before using the estimate for procurement.
+You can select an equipment reference or enter quantities and capacities manually. Panel, battery and controller choices show their sizes and USD unit prices. **Representative size estimate** means a comparable equipment-class price; it does not verify the brand or electrical ratings of equipment you purchase. **Named product reference** identifies a specific product; its price may still use comparable-class evidence. Selecting a different reference uses its reference price and clears the previous price override for that item. Quantity edits update line totals immediately while keeping the unit price. Changing a capacity directly may leave the item without a verified matching specification. Check its status before using the estimate for procurement.
 
 Prices are editable USD amounts.
 
@@ -101,6 +101,10 @@ Each equipment section shows quantity × unit price = line total. Prices are lab
 Each option card identifies generated or manually edited equipment and separates required solar capacity from installed panels. Open **Equipment and cost breakdown** to compare installed items, prices, installation and contingency. For DC-only loads, generated DC and Hybrid options can cost the same because no inverter is needed. Different installed quantities or quotations can make either option more expensive.
 
 ### Use Generated Values
+
+Generated plans choose the closest combined capacity fit among eligible equipment combinations within 10% of the cheapest equipment subtotal. Existing safety margins remain included. Open **Required and installed capacity** to see the requirement, installed capacity and excess percentage for panels, batteries and controllers. A larger array may sometimes reduce controller excess, so the balanced choice is not always the smallest array or the fewest units. Unit-size preferences and documented battery connection limits still apply.
+
+This selection window is separate from the optional ±10% budgeting assumption and from contingency; it adds no automatic charge. Existing quotations can change which combination is most economical. Review retained quotations whenever their associated equipment changes.
 
 **Use generated values** recalculates equipment for the selected option and clears its manual equipment-rating overrides. It preserves your entered price overrides, the other option's edits and your load table.
 

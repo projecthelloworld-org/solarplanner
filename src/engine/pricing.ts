@@ -30,7 +30,11 @@ export function priceDetails(plan: EquipmentPlan, pricing: PricingSettings, stat
     const overridden = state.pricingOverrides[field] !== undefined;
     const review = entry.quantity > 0 && overridden && state.quoteEquipment?.[field] !== priceIdentity(plan, field);
     const unitUsd = pricing[field] ?? pricing.controllerUnitUsd;
-    const basis = overridden ? "User quotation" : entry.reference === true ? "Reference price" : "Unverified allowance";
+    const item = field === "panelUnitUsd" ? catalog.solarPanels.find(p => p.id === s.panelProductId)
+      : field === "batteryUnitUsd" ? catalog.batteries.find(p => p.id === s.batteryProductId)
+      : field === "inverterUnitUsd" ? catalog.hybridInverters.find(p => p.id === plan.hybrid.inverterProductId)
+      : /Controller|controller/.test(field) ? catalog.chargeControllers.find(p => p.id === plan[system].controllerProductId) : undefined;
+    const basis = overridden ? "User quotation" : entry.reference === true ? (item?.referenceKind === "representative" || item?.priceEvidence?.some(e => e.basis === "comparable-class")) ? "Representative size estimate" : "Named product reference" : "Unverified allowance";
     return { ...entry, field, overridden, review, unitUsd, totalUsd: Math.round((entry.quantity * unitUsd + Number.EPSILON) * 100) / 100, basis, note: entry.quantity === 0 ? "" : review ? "Confirm retained quotation: equipment changed or original reference is unknown." : entry.reference === false ? "No matching product price; confirm a quotation for this capacity." : "" };
   });
 }

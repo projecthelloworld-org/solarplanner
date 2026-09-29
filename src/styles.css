@@ -1404,3 +1404,6 @@ summary:focus-visible { outline-offset: -3px; }
 .cost-breakdown li { display: grid; gap: .3rem; padding: .7rem 0; border-bottom: 1px solid #dbe4e2; overflow-wrap: anywhere; }
 
 .option-card dd { white-space: nowrap; }
+
+.capacity-fit { margin: .65rem 0; }
+.capacity-fit li { margin: .5rem 0; overflow-wrap: anywhere; }

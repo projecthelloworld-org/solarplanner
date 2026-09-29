@@ -24,6 +24,8 @@ export function reportEvidence(project: Project, assumptions: Assumptions, bundl
       ["Controller output", bundle.selectedMpptRequirement, bundle.selectedSystem === "dc" ? bundle.actuals.dcMpptA : bundle.actuals.hybridMpptA, (bundle.selectedSystem === "dc" ? bundle.actuals.dcMpptA : bundle.actuals.hybridMpptA) - bundle.selectedMpptRequirement, "A"],
       ...(bundle.selectedSystem === "hybrid" ? [["Inverter continuous selection target", bundle.effectiveInverterRequirementW, bundle.actuals.hybridInverterW, bundle.actuals.hybridInverterW - bundle.effectiveInverterRequirementW, "W"]] : []),
     ] },
+    { title: "Equipment Selection", headings: ["Basis"], rows: [[bundle.selectionExplanation]] },
+    { title: "Capacity Fit", headings: ["Component", "Required", "Installed", "Unit", "Excess %"], rows: bundle.capacityComparison.map(c => [c.label, c.required, c.installed, c.unit, c.excessPercent ?? "Not applicable"]) },
     { title: "Storage and Load Performance", headings: ["Metric", "Value", "Unit"], rows: [
       ["Total load energy", bundle.result.totalDailyWh, "Wh/day"], ["Peak load", bundle.result.peakLoadW, "W"], ["Startup load", bundle.result.surgeLoadW, "W"], ["Critical load energy", bundle.result.criticalDailyWh, "Wh/day"],
       ["Adjusted daily energy", sizing.adjustedDailyWh, "Wh/day"], ["Installed nominal storage", bundle.actuals.batteryWh, "Wh"], ["Usable storage at configured DoD", bundle.usableBatteryWh, "Wh"],

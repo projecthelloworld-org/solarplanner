@@ -54,7 +54,7 @@ Creates explanatory Fully DC and Hybrid recommendation text.
 
 ### `src/engine/planner.ts`
 
-Composes calculation, equipment, costing, and recommendation results into the bundle consumed by the dashboard and selected report. It keeps orchestration out of the DOM layer without duplicating formulas.
+Enumerates complete equipment combinations and applies the shared balanced-fit ranking before composing calculation, equipment, costing, and recommendation results into the bundle consumed by the dashboard and selected report. It keeps orchestration out of the DOM layer without duplicating formulas.
 
 ### `src/app/persistence.ts`
 

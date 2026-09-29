@@ -51,7 +51,7 @@ describe("project report exports", () => {
     for (const exportText of [csv, html]) {
       expect(exportText).toContain("25.6 V x 50 Ah");
       expect(exportText).toContain("USD 180");
-      expect(exportText).toContain("USD 580.58");
+      expect(exportText).toContain("USD 631.62");
     }
   });
 });
