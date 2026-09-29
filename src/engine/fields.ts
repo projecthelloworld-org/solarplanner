@@ -1,4 +1,4 @@
-import type { ElectricalRatings } from "../types/project";
+import type { ElectricalRatings, LoadItem } from "../types/project";
 export interface RatingField { key: keyof ElectricalRatings; label: string; min: number; max: number; integer?: boolean }
 const positive = (key: keyof ElectricalRatings, label: string, max = 1_000_000): RatingField => ({ key, label, min: 0.000001, max });
 const zero = (key: keyof ElectricalRatings, label: string, max = 1_000_000): RatingField => ({ key, label, min: 0, max });
@@ -16,3 +16,8 @@ export const loadAdvancedFields = [
   { key: "voltageMin", label: "Minimum supply V", min: 1, max: 1000 },
   { key: "voltageMax", label: "Maximum supply V", min: 1, max: 1000 },
 ] as const;
+
+/** AC-only inputs are retained when inactive, but do not describe a DC appliance. */
+export function loadFieldApplies(type: LoadItem["currentType"], key: string): boolean {
+  return type === "AC" || !["powerFactor", "startupVA", "frequencyHz"].includes(key);
+}

@@ -1,4 +1,4 @@
-import { loadAdvancedFields, ratingFields } from "./fields";
+import { loadAdvancedFields, loadFieldApplies, ratingFields } from "./fields";
 import type { Assumptions, EngineeringSettings, EquipmentPlan, LoadItem, Project } from "../types/project";
 
 export interface ValidationIssue {
@@ -32,9 +32,9 @@ export function validateLoads(loads: LoadItem[]): ValidationIssue[] {
       ...range(`loads.${index}.hoursPerDay`, `${label} hours per day`, load.hoursPerDay, 0, 24),
       ...range(`loads.${index}.voltage`, `${label} voltage`, load.voltage, 1, 1000),
       ...range(`loads.${index}.surgeMultiplier`, `${label} surge multiplier`, load.surgeMultiplier, 1, 20),
-      ...loadAdvancedFields.flatMap((field) => load[field.key] === undefined ? [] : range(`loads.${index}.${field.key}`, `${label} ${field.label}`, load[field.key]!, field.min, field.max)),
+      ...loadAdvancedFields.filter((field) => loadFieldApplies(load.currentType, field.key)).flatMap((field) => load[field.key] === undefined ? [] : range(`loads.${index}.${field.key}`, `${label} ${field.label}`, load[field.key]!, field.min, field.max)),
       ...((load.voltageMin ?? load.voltage) > (load.voltageMax ?? load.voltage) ? [{ path: `loads.${index}.voltageMin`, message: `${label}: supply minimum must not exceed maximum.` }] : []),
-      ...(load.startupVA !== undefined && load.startupVA < load.watts * load.surgeMultiplier ? [{ path: `loads.${index}.startupVA`, message: `${label}: startup VA must be at least startup watts per device.` }] : []),
+      ...(loadFieldApplies(load.currentType, "startupVA") && load.startupVA !== undefined && load.startupVA < load.watts * load.surgeMultiplier ? [{ path: `loads.${index}.startupVA`, message: `${label}: startup VA must be at least startup watts per device.` }] : []),
       ...(load.startupSeconds === 0 && load.surgeMultiplier > 1 ? [{ path: `loads.${index}.startupSeconds`, message: `${label}: startup duration must be above zero when a surge is entered.` }] : []),
     ];
   });

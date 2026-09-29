@@ -1,7 +1,7 @@
 import type { Assumptions, Project } from "../types/project";
 import type { getSelectedReportBundle } from "../engine/planner";
 import { CALCULATION_REVISION, engineeringFor } from "../engine/engineering";
-import { loadAdvancedFields } from "../engine/fields";
+import { loadAdvancedFields, loadFieldApplies } from "../engine/fields";
 
 export interface EvidenceSection { title: string; headings: string[]; rows: Array<Array<string | number>> }
 export function reportEvidence(project: Project, assumptions: Assumptions, bundle: ReturnType<typeof getSelectedReportBundle>, generatedAt = new Date().toISOString()): EvidenceSection[] {
@@ -33,7 +33,7 @@ export function reportEvidence(project: Project, assumptions: Assumptions, bundl
     { title: "Equipment Checks", headings: ["Check", "Result", "Evidence / missing information"], rows: bundle.selectedEvaluation.checks.map((c) => [c.label, c.status ?? (c.passed ? "passed" : "failed"), c.detail ?? `${c.actual} ${c.unit} installed; ${c.required} ${c.unit} required.`]) },
     { title: "Selected Equipment References", headings: ["Component", "Reference", "Specification evidence"], rows: Object.entries(bundle.products).filter(([group]) => group !== "inverter" || bundle.selectedSystem === "hybrid").map(([group, product]) => [group, product?.name ?? "Custom / unverified", product ? [product.specificationRevision, product.specificationCheckedOn ? `Checked ${product.specificationCheckedOn}` : "Check date unverified", product.specificationBasis, ...(product.specificationSources ?? [])].filter(Boolean).join("; ") : "Matching manufacturer specifications unavailable"]) },
     { title: "Advanced Load Inputs", headings: ["Load", "Input", "Value"], rows: bundle.result.loadRows.flatMap(({ load }) => [
-      ...loadAdvancedFields.map((field): Array<string | number> => [load.name, field.label, load[field.key] ?? "Not provided"]),
+      ...loadAdvancedFields.filter((field) => loadFieldApplies(load.currentType, field.key)).map((field): Array<string | number> => [load.name, field.label, load[field.key] ?? "Not provided"]),
       [load.name, "Startup group", load.startupGroup || (project.startupMode === "all" ? "All active loads" : "This row")],
     ]) },
   ];

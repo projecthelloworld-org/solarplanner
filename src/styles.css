@@ -1391,3 +1391,5 @@ summary:focus-visible { outline-offset: -3px; }
   .option-section { break-inside: auto; page-break-inside: auto; }
   .report-table tr { break-inside: avoid; page-break-inside: avoid; }
 }
+
+.load-advanced label[hidden] { display: none; }

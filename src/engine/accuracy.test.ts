@@ -4,6 +4,8 @@ import assumptions from "../data/assumptions.json";
 import products from "../data/default-products.json";
 import brands from "../data/brand-profiles.json";
 import type { EngineeringSettings, LoadItem, ProductCatalog, Project } from "../types/project";
+import { renderLoadAdvanced } from "../app/advanced";
+import { loadFieldApplies } from "./fields";
 import { calculateProject } from "./calculations";
 import { getProjectBundle } from "./planner";
 import { inverterChecks, inverterRequirement, technicalChecks } from "./engineering";
@@ -193,5 +195,40 @@ describe("accuracy review regression cases", () => {
     const project = site([load({ powerFactor: 0, voltageMin: 250, voltageMax: 200, startupVA: 10 })]);
     expect(validateProject(project).map((v) => v.path)).toEqual(expect.arrayContaining(["loads.0.powerFactor", "loads.0.voltageMin", "loads.0.startupVA"]));
     expect(validateEngineering({ minimumCellTemperatureC: 80, maximumCellTemperatureC: 20, pvIscFactor: 0 }).length).toBe(2);
+  });
+});
+
+describe("appliance-specific advanced inputs", () => {
+  it("marks only AC-only controls inactive for DC regardless of the plan", () => {
+    const dc = load({ currentType: "DC" });
+    for (const key of ["powerFactor", "startupVA", "frequencyHz"]) {
+      expect(loadFieldApplies("DC", key)).toBe(false);
+      expect(renderLoadAdvanced(dc)).toContain(`data-advanced-load-field="${key}" hidden`);
+      expect(renderLoadAdvanced({ ...dc, currentType: "AC" })).not.toContain(`data-advanced-load-field="${key}" hidden`);
+    }
+    for (const key of ["startupSeconds", "voltageMin", "voltageMax", "startupGroup"]) expect(loadFieldApplies("DC", key)).toBe(true);
+  });
+  it("ignores retained AC values for DC validation and startup calculations", () => {
+    const project = site([load({ currentType: "DC", voltage: 24, powerFactor: 0, startupVA: 1, frequencyHz: -1 })]);
+    expect(validateProject(project)).toEqual([]);
+    const actual = calculateProject(project, assumptions);
+    const clean = structuredClone(project);
+    delete clean.loads[0].powerFactor; delete clean.loads[0].startupVA; delete clean.loads[0].frequencyHz;
+    expect(actual.surgeLoadW).toBe(calculateProject(clean, assumptions).surgeLoadW);
+    expect(getProjectBundle(project, assumptions).evaluation.checks).toEqual(getProjectBundle(clean, assumptions).evaluation.checks);
+    project.loads[0].currentType = "AC";
+    expect(validateProject(project).map((i) => i.path)).toEqual(expect.arrayContaining(["loads.0.powerFactor", "loads.0.startupVA", "loads.0.frequencyHz"]));
+  });
+  it("retains DC startup groups and durations for battery checks", () => {
+    const project = site([load({ currentType: "DC", voltage: 24, surgeMultiplier: 3, startupSeconds: 2, startupGroup: "motors" }), load({ id: "y", currentType: "DC", voltage: 24, surgeMultiplier: 3, startupSeconds: 4, startupGroup: "motors" })]);
+    expect(calculateProject(project, assumptions).surgeLoadW).toBe(600);
+    expect(getProjectBundle(project, assumptions).evaluation.checks.find((c) => c.label === "Battery startup 1")?.detail).toContain("4 s");
+  });
+  it("omits inactive AC fields from both report formats", () => {
+    const project = site([load({ currentType: "DC", voltage: 24, powerFactor: .8, startupVA: 500, frequencyHz: 50 })]);
+    for (const text of [buildProjectCsv(project, assumptions, brands), renderProjectReport(project, assumptions, brands)]) {
+      for (const label of ["Running power factor", "Startup VA each", "AC frequency Hz"]) expect(text).not.toContain(label);
+      expect(text).toContain("Startup seconds");
+    }
   });
 });

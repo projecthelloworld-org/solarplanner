@@ -1,11 +1,11 @@
-import { loadAdvancedFields, ratingFields } from "../engine/fields";
+import { loadAdvancedFields, loadFieldApplies, ratingFields } from "../engine/fields";
 import { engineeringFor } from "../engine/engineering";
 import type { EngineeringSettings, LoadItem, ProductItem, Project } from "../types/project";
 import { attribute, escapeHtml } from "../utils/html";
 
 export function renderLoadAdvanced(load: LoadItem): string {
   return `<details class="load-advanced"><summary>Advanced</summary><div class="mini-grid">
-    ${loadAdvancedFields.map((f) => `<label><span>${f.label}</span><input aria-label="${f.label}" type="number" min="${f.min}" max="${f.max}" step="any" data-load-id="${attribute(load.id)}" data-load-field="${f.key}" value="${attribute(load[f.key] ?? "")}" placeholder="Unknown" /></label>`).join("")}
+    ${loadAdvancedFields.map((f) => `<label data-advanced-load-field="${f.key}" ${loadFieldApplies(load.currentType, f.key) ? "" : "hidden"}><span>${f.label}</span><input ${loadFieldApplies(load.currentType, f.key) ? "" : "disabled"} aria-label="${f.label}" type="number" min="${f.min}" max="${f.max}" step="any" data-load-id="${attribute(load.id)}" data-load-field="${f.key}" value="${attribute(load[f.key] ?? "")}" placeholder="Unknown" /></label>`).join("")}
     <label><span>Startup group</span><input aria-label="Startup group" maxlength="100" data-load-id="${attribute(load.id)}" data-load-field="startupGroup" value="${attribute(load.startupGroup ?? "")}" placeholder="This row only" /></label>
   </div></details>`;
 }
