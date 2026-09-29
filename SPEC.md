@@ -28,7 +28,7 @@ Both option cards remain visible in the planner so users can compare them. The p
 3. The user clicks **Calculate** to apply load changes.
 4. The app recalculates demand, sizing, generated equipment, costs, adequacy status, report data, and CSV data.
 5. The user can manually edit equipment quantities, capacities, and prices.
-6. Manual equipment edits are preserved while warnings update against the latest load-based requirement.
+6. Calculate replaces manual equipment edits with generated equipment for both options while retaining explicit price overrides.
 7. The user can click **Use generated values** to reset equipment quantities and capacities from the current load demand.
 8. The user clicks **Generate Report** when ready to render the selected system report.
 9. The user prints/saves PDF or exports CSV from the rendered report section.
@@ -244,7 +244,7 @@ Generated values use calculated requirements, voltage-compatible product IDs, an
 
 For bank topology, 12.8/25.6/51.2 V LiFePO4 maps to 12/24/48 V. The project selector offers those three nominal classes; older custom voltages remain readable with a review warning. Arithmetic series ratios alone do not approve wiring. Unknown BMS limits, incompatible edited ratings and missing product identities require attention. Empty projects generate no equipment quantities.
 
-Equipment plans persist product IDs for panels, batteries, DC/Hybrid controllers and inverters. Specifications resolve from the authoritative JSON catalogue, never from imported user-supplied metadata. Edited capacities invalidate their selected identity. Product selectors apply the named reference's capacity and base price; manual price edits and saved equipment remain intact during recalculation. DC and Hybrid controllers have independent references, quantities and prices. The optional hybridControllerUnitUsd defaults to the legacy controller price when absent. Selecting a compatible single inverter recalculates its supplementary controller quantity; subsequent manual quantity edits remain possible. Battery/inverter source notes identify comparable pricing and revision uncertainty. Catalogue records include optional supported voltages, current/connection/PV limits, inverter type, MPPT capacity and price evidence. Legacy missing fields remain unverified rather than being silently inferred.
+Equipment plans persist product IDs for panels, batteries, DC/Hybrid controllers and inverters. Specifications resolve from the authoritative JSON catalogue, never from imported user-supplied metadata. Edited capacities invalidate their selected identity. Product selectors apply the named reference's capacity and base price, clearing that item's price override. Calculate regenerates both options while retaining quotations, with review warnings when equipment identities change or are unknown. DC and Hybrid controllers have independent references, quantities and prices. The optional hybridControllerUnitUsd defaults to the legacy controller price when absent. Selecting a compatible single inverter recalculates its supplementary controller quantity; subsequent manual quantity edits remain possible. Battery/inverter source notes identify comparable pricing and revision uncertainty. Catalogue records include optional supported voltages, current/connection/PV limits, inverter type, MPPT capacity and price evidence. Legacy missing fields remain unverified rather than being silently inferred.
 
 Solar and battery equipment, costs, checks, custom edits and price overrides are independent for Fully DC and Hybrid. Selection uses each option's own requirement. Catalogue choice is a transparent budgeting heuristic, not a supplier recommendation or component compatibility approval.
 
@@ -266,7 +266,7 @@ The side panel keeps equipment quantities, capacities, and prices together in ac
 
 Currency is folded by default. Solar Panels is open by default. Prices are entered as USD base unit prices, and totals are displayed in the selected project currency using the manual exchange rate.
 
-Starter prices use dated Kenya/Uganda retail observations and explicit allowances, not a statistically representative market average. An untouched generated plan uses the catalogue price matching its selected product class and a compact or hub-scale balance-of-system allowance. Price edits create explicit overrides for the selected option. Use generated values resets that option's equipment and manual equipment-rating overrides while retaining quoted prices. Existing projects with local prices remain local. The source checks and limits are documented in `docs/PRICING.md`.
+Starter prices are described as indicative African market planning estimates. The optional ±10% budgeting variation is a documentation-only assumption, not a measured market range or verified global comparison; it does not change totals or the separate contingency calculation. An untouched generated plan uses the catalogue price matching its selected product class and a compact or hub-scale balance-of-system allowance. Price edits create explicit overrides for the selected option. Use generated values resets that option's equipment and manual equipment-rating overrides while retaining quoted prices. Existing projects with local prices remain local. User guidance is in [the pricing guide](docs/PRICING.md); original sources and limitations are retained in [the maintainer evidence record](docs/maintainers/PRICING_EVIDENCE.md).
 
 ## Adequacy Checks
 
@@ -379,7 +379,7 @@ Editable defaults live in `src/data`:
 
 - Solar and battery equipment are shared across Fully DC and Hybrid options.
 - Controllers and inverter values are option-specific.
-- Manual equipment edits are preserved until **Use generated values** is clicked.
+- Calculate regenerates both options; **Use generated values** resets only the selected option.
 - Load-table edits are applied when the user clicks **Calculate**.
 - Exchange rates are manually entered; there is no live currency lookup.
 - Prices are planning assumptions and should be edited for local markets.

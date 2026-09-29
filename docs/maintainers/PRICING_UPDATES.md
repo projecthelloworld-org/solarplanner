@@ -1,5 +1,7 @@
 # Maintaining the pricing baseline
 
+Preserve dated source observations in the [pricing evidence record](PRICING_EVIDENCE.md). The broader wording and optional ±10% range in the [user guide](../PRICING.md) do not establish statistical market coverage or change the original evidence.
+
 Regenerate the equipment reference CSV with `node scripts/export-equipment-reference.mjs` after changing catalogue records.
 
 ## Refresh Procedure

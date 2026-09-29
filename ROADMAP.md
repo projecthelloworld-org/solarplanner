@@ -27,7 +27,7 @@ This roadmap describes the public direction of Hello Solar Planner. It is a guid
 
 ### Pricing Quality
 
-- Refresh Kenya and Uganda reference prices at least every six months.
+- Refresh African market planning estimates at least every six months.
 - Expand named-product evidence while clearly distinguishing quotations from comparable-class allowances.
 - Define what is included in distribution, cabling, earthing, monitoring, installation, tax, delivery, and remote-site logistics.
 - Preserve the price evidence and assumptions used for each planning report.
@@ -42,7 +42,7 @@ This roadmap describes the public direction of Hello Solar Planner. It is a guid
 
 ### Regional Adaptation
 
-- Add Kenya, Uganda, and custom pricing profiles with dated source metadata.
+- Add local-market and custom pricing profiles with dated source metadata.
 - Support localization of interface and report text.
 - Make project-specific assumptions and price snapshots portable with the project.
 

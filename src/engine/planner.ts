@@ -1,3 +1,4 @@
+import { priceDetails, priceIdentity } from "./pricing";
 import { calculateProject } from "./calculations";
 import { estimateCosts } from "./costing";
 import { evaluateEquipmentPlan, generateEquipmentPlan, getEquipmentActuals, isStarterPricing, matchedInverter, pricingForGeneratedPlan } from "./equipment";
@@ -77,6 +78,7 @@ function optionBundle(project: Project, assumptions: Assumptions, system: System
   const usableBatteryWh = actuals.batteryWh * assumptions.batteryDepthOfDischarge;
   return {
     result, plan, generatedPlan: generated.plan, pricing, evaluation, actuals,
+    priceDetails: priceDetails(plan, pricing, saved, system, catalog),
     cost: estimateCosts(site, plan, pricing, assumptions, system),
     effectiveInverterRequirementW: inverterRequirement(result, inverter),
     usableBatteryWh,
@@ -103,4 +105,32 @@ export function getSelectedReportBundle(project: Project, assumptions: Assumptio
     selectedMpptRequirement: bundle.evaluation.checks.find((c) => c.label === "MPPT/controller")!.required,
     selectedCost: bundle.cost, selectedRecommendation: bundle.recommendations.find((r) => r.id === selectedSystem)!,
   };
+}
+
+/** Regenerate both options, preserving quotes and only ratings for unchanged equipment. */
+export function regenerateEquipment(project: Project, assumptions: Assumptions, previous = getProjectBundle(project, assumptions)): Project {
+  const next = structuredClone(project);
+  next.optionPlans = { ...next.optionPlans };
+  for (const system of ["dc", "hybrid"] as const) {
+    const saved = structuredClone(optionState(next, system));
+    next.optionPlans[system] = { ...saved, mode: "generated", equipment: undefined };
+  }
+  const groups = ["panel", "battery", "controller", "inverter"] as const;
+  for (let pass = 0; pass < 5; pass++) {
+    const bundle = getProjectBundle(next, assumptions);
+    let cleared = false;
+    for (const system of ["dc", "hybrid"] as const) {
+      const saved = next.optionPlans[system]!;
+      for (const group of groups) {
+        const field = group === "panel" ? "panelUnitUsd" : group === "battery" ? "batteryUnitUsd" : group === "inverter" ? "inverterUnitUsd" : system === "dc" ? "controllerUnitUsd" : "hybridControllerUnitUsd";
+        if (saved.engineering?.[group] && priceIdentity(previous.options[system].plan, field) !== priceIdentity(bundle.options[system].plan, field)) {
+          delete saved.engineering[group]; cleared = true;
+        }
+      }
+    }
+    if (!cleared) break;
+  }
+  next.equipmentPlanMode = "generated";
+  next.equipmentPlan = undefined;
+  return next;
 }

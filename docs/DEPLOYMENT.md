@@ -23,7 +23,7 @@ Clone the repository and check out a tagged release:
 ```bash
 git clone https://github.com/projecthelloworld-org/solarplanner.git
 cd solarplanner
-git checkout v1.3.1
+git checkout v1.3.2
 ```
 
 Build and start:
@@ -126,7 +126,7 @@ Read `CHANGELOG.md`, then check out the target tag and rebuild:
 
 ```bash
 git fetch --tags
-git checkout v1.3.1
+git checkout v1.3.2
 docker compose up -d --build
 ```
 

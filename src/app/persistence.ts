@@ -189,6 +189,7 @@ export function normalizeProject(rawProject: Partial<Project>): Project {
       mode: (raw?.mode ?? project.equipmentPlanMode) === "custom" ? "custom" : "generated",
       equipment: normalizeEquipmentPlan(raw ? raw.equipment : project.equipmentPlan),
       pricingOverrides: overrides,
+      quoteEquipment: Object.fromEntries(Object.entries(raw?.quoteEquipment ?? {}).filter(([key, value]) => key in overrides && typeof value === "string" && value.length <= 300)),
       engineering: normalizeEngineering(raw?.engineering),
     };
   }

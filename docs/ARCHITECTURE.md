@@ -93,7 +93,7 @@ The app normalizes saved projects on load so newly introduced fields receive def
 
 ## Calculation Boundary
 
-The load table becomes the demand source of truth when the user clicks **Calculate**. Manual equipment edits remain active until the user clicks **Use generated values**.
+The load table becomes the demand source of truth when the user clicks **Calculate**. Calculate regenerates both equipment plans; Use generated values resets only the selected option. Quotes have optional equipment fingerprints for review warnings; older quotes with unknown provenance remain preserved and require review. Product-specific ratings are cleared when regeneration replaces their product.
 
 The dashboard calculates both options independently. `selectedSystem` selects the equipment, engineering settings and prices being edited, and the option used for report and CSV output.
 

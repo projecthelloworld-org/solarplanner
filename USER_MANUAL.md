@@ -43,7 +43,7 @@ Use **Add load** to add a row and the row's remove button to delete it. Zero qua
 
 ### Apply Changes
 
-Click **Calculate** after editing loads. Added rows, removed rows and advanced load details also wait for this step.
+Click **Calculate** after editing loads. Added rows, removed rows and advanced load details also wait for this step. Calculate regenerates equipment for **both** options, replacing manual equipment quantities and capacities. Entered quotations are retained and flagged for review if their equipment changes.
 
 While changes are pending, the results show the last calculation and report generation is held. You can edit other settings without losing unfinished load entries, but calculate before refreshing or leaving the page: unfinished load edits are not saved across reloads.
 
@@ -88,9 +88,17 @@ Both options remain available for comparison. Each has independent equipment, en
 
 Open **Equipment & pricing** to review panels, batteries, controllers, inverters and supporting items such as cabling, distribution, earthing and monitoring.
 
-You can select an equipment reference or enter quantities and capacities manually. Changing a capacity directly may leave the item without a verified matching specification. Check its status before using the estimate for procurement.
+You can select an equipment reference or enter quantities and capacities manually. Selecting a different named product uses its reference price and clears the previous price override for that item. Quantity edits update line totals immediately while keeping the unit price. Changing a capacity directly may leave the item without a verified matching specification. Check its status before using the estimate for procurement.
 
-Prices are editable USD amounts. The initial values are dated regional allowances, not supplier quotations. Replace them with comparable local quotes and confirm delivery, tax, warranty, mounting and installation scope. See the [pricing guide](docs/PRICING.md).
+Prices are editable USD amounts.
+
+Prices are indicative African market planning estimates. A ±10% variation around the listed estimates may be used for initial budgeting; this is a planning assumption, not a measured market range or a verified comparison with global averages. Actual costs may fall outside this range. Confirm current local quotations before procurement.
+
+The optional ±10% range does not automatically change planner totals. It is separate from the existing contingency allowance; do not add it again as a contingency for the same cost uncertainty. Confirm delivery, tax, warranty, mounting and installation scope. See the [pricing guide](docs/PRICING.md).
+
+Each equipment section shows quantity × unit price = line total. Prices are labelled **Reference price**, **User quotation** or **Unverified allowance**. Use **Use reference price** to remove a quotation override. For custom capacities without a matching product, the price is an unverified allowance; obtain a quotation rather than assuming price scales with capacity.
+
+Each option card identifies generated or manually edited equipment and separates required solar capacity from installed panels. Open **Equipment and cost breakdown** to compare installed items, prices, installation and contingency. For DC-only loads, generated DC and Hybrid options can cost the same because no inverter is needed. Different installed quantities or quotations can make either option more expensive.
 
 ### Use Generated Values
 
@@ -192,7 +200,7 @@ If the planner displays a storage or recovery warning, follow its guidance and k
 | Issue | What to check |
 | --- | --- |
 | Results do not reflect load edits | Click **Calculate** and correct highlighted inputs. |
-| Manual equipment values changed | **Use generated values** resets equipment for the selected option. Check which option is selected. |
+| Manual equipment values changed | **Calculate** regenerates both options. **Use generated values** resets only the selected option. |
 | Report shows the wrong option | Select the intended system option and generate the report again. |
 | Costs look wrong | Review unit prices, equipment quantities, currency, exchange rate, installation and contingency rates. |
 | Equipment is unresolved | Review failed and unverified checks; obtain a matching specification or quotation. |
