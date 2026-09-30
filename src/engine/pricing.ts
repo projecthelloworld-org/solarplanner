@@ -17,7 +17,7 @@ export function priceDetails(plan: EquipmentPlan, pricing: PricingSettings, stat
   const entries = [
     { field: "panelUnitUsd", label: "Solar panels", quantity: s.panelCount, reference: catalog.solarPanels.some(p => p.id === s.panelProductId && p.watts === s.panelWatts) },
     { field: "batteryUnitUsd", label: "Batteries", quantity: s.batteryCount, reference: catalog.batteries.some(p => p.id === s.batteryProductId && p.voltage === s.batteryVoltage && p.ampHours === s.batteryAh) },
-    { field: system === "dc" ? "controllerUnitUsd" : "hybridControllerUnitUsd", label: "Separate controllers", quantity: plan[system].controllerCount, reference: catalog.chargeControllers.some(p => p.id === plan[system].controllerProductId && p.amps === plan[system].mpptAmps) },
+    { field: system === "dc" ? "controllerUnitUsd" : "hybridControllerUnitUsd", label: "Separate charge controllers", quantity: plan[system].controllerCount, reference: catalog.chargeControllers.some(p => p.id === plan[system].controllerProductId && p.amps === plan[system].mpptAmps) },
     ...(system === "hybrid" ? [{ field: "inverterUnitUsd", label: "Inverters", quantity: plan.hybrid.inverterCount, reference: catalog.hybridInverters.some(p => p.id === plan.hybrid.inverterProductId && p.watts === plan.hybrid.inverterWatts) }] : []),
     { field: "dcDistributionUnitUsd", label: "DC distribution", quantity: plan.balance.dcDistributionCount },
     ...(system === "hybrid" ? [{ field: "acDistributionUnitUsd", label: "AC distribution", quantity: plan.balance.acDistributionCount }] : []),

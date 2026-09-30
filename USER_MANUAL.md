@@ -88,6 +88,8 @@ Both options remain available for comparison. Each has independent equipment, en
 
 Open **Equipment & pricing** to review panels, batteries, controllers, inverters and supporting items such as cabling, distribution, earthing and monitoring.
 
+**Charge Controller**, directly below Batteries, is available for both system options. It shows separate controller quantities, capacity and prices. Any integrated inverter MPPT capacity is shown separately and is included in the inverter price. When both are installed, separate controllers provide additional capacity. You can select or add a separate controller even when its current quantity is zero. The Hybrid Inverter heading shows only inverter costs.
+
 Select a panel, battery, controller or inverter reference to see its capacity and USD unit price, or enter custom equipment values. Selecting another reference applies its price and replaces any quotation entered for that item. Changing quantity updates the line total immediately without changing the unit price.
 
 Changing capacity manually can leave the equipment without a matching reference. Its electrical ratings and price then need review.

@@ -57,11 +57,13 @@ describe("voltage-compatible planning", () => {
     expect(includedMpptAmps(bundle.plan)).toBe(60);
     expect(bundle.plan.hybrid.controllerCount).toBe(0);
     expect(bundle.options.dc.plan.dc.controllerCount).toBeGreaterThan(0);
-    expect(bundle.costs[1].lines.find((line) => line.category === "Charge controller or hybrid inverter")?.totalUsd).toBe(0);
+    expect(bundle.costs[1].lines.find((line) => line.category === "Separate charge controllers")?.totalUsd).toBe(0);
     expect(bundle.costs[1].lines.find((line) => line.category === "Hybrid inverter capacity")?.totalUsd).toBe(310);
     for (const exported of [buildProjectCsv(project, assumptions, brands), renderProjectReport(project, assumptions, brands)]) {
       expect(exported).toContain("24 V input");
       expect(exported).toContain("60 A MPPT included");
+      expect(exported).toContain("Separate charge controllers");
+      expect(exported).not.toContain("Charge controller or hybrid inverter");
       expect(exported).toContain("310");
     }
   });
@@ -111,8 +113,8 @@ describe("voltage-compatible planning", () => {
     project.pricing.controllerUnitUsd = 80;
     project.pricing.hybridControllerUnitUsd = 125;
     const bundle = getProjectBundle(normalizeProject(JSON.parse(JSON.stringify(project))), assumptions);
-    expect(bundle.costs[0].lines.find((line) => line.category === "Charge controller or hybrid inverter")?.unitCostUsd).toBe(80);
-    expect(bundle.costs[1].lines.find((line) => line.category === "Charge controller or hybrid inverter")?.unitCostUsd).toBe(125);
+    expect(bundle.costs[0].lines.find((line) => line.category === "Separate charge controllers")?.unitCostUsd).toBe(80);
+    expect(bundle.costs[1].lines.find((line) => line.category === "Separate charge controllers")?.unitCostUsd).toBe(125);
   });
 
   it("retains unsupported legacy voltage with explicit warnings", () => {

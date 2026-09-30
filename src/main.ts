@@ -7,7 +7,7 @@ import { loadAppState, normalizeProject, saveAppState } from "./app/persistence"
 import { renderAdvancedSettings, renderLoadAdvanced } from "./app/advanced";
 import { loadAdvancedFields, loadFieldApplies } from "./engine/fields";
 import { engineeringFor } from "./engine/engineering";
-import { inverterDescription, requiredControllerAmps, supplementaryControllers } from "./engine/equipment";
+import { includedMpptAmps, inverterDescription, requiredControllerAmps, supplementaryControllers } from "./engine/equipment";
 import productsData from "./data/default-products.json";
 import { getProjectBundle, optionState, regenerateEquipment } from "./engine/planner";
 import { validateAssumptions, validateEngineering, validateEquipmentPlan, validateProject, type ValidationIssue } from "./engine/validation";
@@ -264,6 +264,16 @@ function accordionSummary(title: string, summary: string, amount = "", iconLabel
 
 function renderSideControls(project: Project, plan: EquipmentPlan, evaluations: { dc: EquipmentEvaluation; hybrid: EquipmentEvaluation }, generatedPlan: EquipmentPlan, pricing: PricingSettings, refs: ReturnType<typeof getProjectBundle>["products"]) {
   const details = getProjectBundle(project, state.assumptions).priceDetails;
+  const system = project.selectedSystem;
+  const controller = plan[system];
+  const controllerPriceField = system === "dc" ? "controllerUnitUsd" : "hybridControllerUnitUsd";
+  const controllerPrice = pricing[controllerPriceField] ?? pricing.controllerUnitUsd;
+  const integratedAmps = system === "hybrid" ? includedMpptAmps(plan, catalog) : 0;
+  const separateAmps = controller.controllerCount * controller.mpptAmps;
+  const controllerSummary = controller.controllerCount > 0
+    ? `${controller.controllerCount} controller(s) x ${controller.mpptAmps} A · ${decimalFormat.format(separateAmps)} A separate${integratedAmps > 0 ? ` + ${decimalFormat.format(integratedAmps)} A integrated` : ""}`
+    : integratedAmps > 0 ? `${decimalFormat.format(integratedAmps)} A integrated MPPT` : "No controller installed";
+
   const priceControl = (label: string, field: keyof PricingSettings, value: number) => {
     const detail = details.find(p => p.field === field);
     return priceInput(label, field, value) + (detail ? `<div class="price-basis"><strong>${detail.quantity} × ${moneyUsd(detail.unitUsd)} = ${moneyUsd(detail.totalUsd)}</strong><span>${escapeHtml(detail.basis)}</span>${detail.note ? `<span class="price-review">${escapeHtml(detail.note)}</span>` : ""}${detail.overridden ? `<button type="button" data-reset-price="${field}">Use reference price</button>` : ""}</div>` : "");
@@ -317,32 +327,29 @@ function renderSideControls(project: Project, plan: EquipmentPlan, evaluations: 
           <p class="comparison-note">${escapeHtml(productPriceNote("batteries", plan.shared.batteryProductId))}</p>
         </details>
 
-        <details ${project.selectedSystem !== "dc" ? "hidden" : ""}>
-          ${accordionSummary("DC Controller", `${plan.dc.controllerCount} controller, ${plan.dc.mpptAmps} A`, `${moneyUsd(plan.dc.controllerCount * pricing.controllerUnitUsd)} total`, "controller")}
+        <details data-charge-controller>
+          ${accordionSummary("Charge Controller", controllerSummary, `${moneyUsd(controller.controllerCount * controllerPrice)} total`, "controller")}
           <div class="accordion-body mini-grid">
-            ${productSelect("Controller reference", "chargeControllers", plan.dc.controllerProductId, "dc")}
-            ${hardwareInput("Controllers", "dc", "controllerCount", plan.dc.controllerCount)}
-            ${hardwareInput("MPPT amps", "dc", "mpptAmps", plan.dc.mpptAmps)}
-            ${priceControl("Price per controller", "controllerUnitUsd", pricing.controllerUnitUsd)}
+            ${productSelect("Controller reference", "chargeControllers", controller.controllerProductId, system)}
+            ${hardwareInput("Separate controllers", system, "controllerCount", controller.controllerCount)}
+            ${hardwareInput("Amps per controller", system, "mpptAmps", controller.mpptAmps)}
+            ${priceControl("Price per controller", controllerPriceField, controllerPrice)}
           </div>
-          ${renderWarnings(evaluations.dc)}
+          <p class="comparison-note">${escapeHtml(controllerSummary)}.</p>
+          ${integratedAmps > 0 ? `<p class="comparison-note">${decimalFormat.format(integratedAmps)} A integrated MPPT. ${controller.controllerCount === 0 ? "Included in inverter price; no separate controller installed." : "Included in inverter price; separate controllers provide an additional " + decimalFormat.format(separateAmps) + " A."}</p>` : ""}
+          ${renderWarnings(evaluations[system])}
         </details>
 
         <details ${project.selectedSystem !== "hybrid" ? "hidden" : ""}>
-          ${accordionSummary("Hybrid Inverter", `${plan.hybrid.inverterCount} inverter, ${plan.hybrid.inverterWatts} W`, `${moneyUsd(plan.hybrid.inverterCount * pricing.inverterUnitUsd + plan.hybrid.controllerCount * (pricing.hybridControllerUnitUsd ?? pricing.controllerUnitUsd))} total`, "inverter")}
+          ${accordionSummary("Hybrid Inverter", `${plan.hybrid.inverterCount} inverter, ${plan.hybrid.inverterWatts} W`, `${moneyUsd(plan.hybrid.inverterCount * pricing.inverterUnitUsd)} total`, "inverter")}
           <div class="accordion-body mini-grid">
             ${productSelect("Inverter reference", "hybridInverters", plan.hybrid.inverterProductId, "inverter")}
-            ${productSelect("Separate controller reference", "chargeControllers", plan.hybrid.controllerProductId, "hybrid")}
-            ${hardwareInput("Controllers", "hybrid", "controllerCount", plan.hybrid.controllerCount)}
-            ${hardwareInput("MPPT amps", "hybrid", "mpptAmps", plan.hybrid.mpptAmps)}
-            ${priceControl("Price per separate controller", "hybridControllerUnitUsd", pricing.hybridControllerUnitUsd ?? pricing.controllerUnitUsd)}
             ${hardwareInput("Inverters", "hybrid", "inverterCount", plan.hybrid.inverterCount)}
             ${hardwareInput("Watts each", "hybrid", "inverterWatts", plan.hybrid.inverterWatts)}
             ${priceControl("Price per inverter", "inverterUnitUsd", pricing.inverterUnitUsd)}
           </div>
           <p class="comparison-note">${escapeHtml(inverterDescription(plan))}</p>
           <p class="comparison-note">${escapeHtml(productPriceNote("hybridInverters", plan.hybrid.inverterProductId))}</p>
-          ${renderWarnings(evaluations.hybrid)}
         </details>
 
         <details>

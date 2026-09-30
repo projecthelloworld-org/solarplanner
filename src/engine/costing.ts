@@ -40,7 +40,7 @@ export function estimateCosts(
   if (systemId === "dc") {
     lines.push(
       line(
-        "Charge controller or hybrid inverter",
+        "Separate charge controllers",
         `${plan.dc.controllerCount} controller(s) x ${plan.dc.mpptAmps} A MPPT`,
         plan.dc.controllerCount,
         pricing.controllerUnitUsd,
@@ -50,7 +50,7 @@ export function estimateCosts(
   } else {
     lines.push(
       line(
-        "Charge controller or hybrid inverter",
+        "Separate charge controllers",
         `${plan.hybrid.controllerCount} controller(s) x ${plan.hybrid.mpptAmps} A MPPT`,
         plan.hybrid.controllerCount,
         pricing.hybridControllerUnitUsd ?? pricing.controllerUnitUsd,
