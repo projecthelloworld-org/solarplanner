@@ -585,20 +585,11 @@ h1 {
   transform: translateY(-3px);
 }
 
-.partner-card-placeholder {
-  border-top-color: #d5d1ca;
-  color: #6f716f;
-}
-
 .partner-index {
   color: var(--peppermint);
   font-size: 0.74rem;
   font-weight: 800;
   text-transform: uppercase;
-}
-
-.partner-card-placeholder .partner-index {
-  color: #858782;
 }
 
 .partner-card h3 {
@@ -623,6 +614,25 @@ h1 {
   color: var(--orange);
   font-size: 0.88rem;
   font-weight: 750;
+}
+
+.partner-actions {
+  display: grid;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 26px;
+}
+
+.partner-actions .partner-link {
+  margin-top: 0;
+  padding-top: 0;
+  text-underline-offset: 4px;
+}
+
+.partner-card:focus-visible,
+.partner-actions a:focus-visible {
+  outline: 3px solid var(--peppermint);
+  outline-offset: 4px;
 }
 
 .future-band {

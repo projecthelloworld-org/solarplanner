@@ -166,10 +166,14 @@ if (app) {
               <span class="partner-link">Open Giga Meter <span aria-hidden="true">&#8599;</span></span>
             </a>
 
-            <article class="partner-card partner-card-placeholder">
-              <span class="partner-index">03 / Open slot</span>
-              <h3>Partner tool coming soon</h3>
-              <p>This space is reserved for another practical project that communities and partners can inspect, adapt, and deploy.</p>
+            <article class="partner-card partner-card-active">
+              <span class="partner-index">03 / Fibre infrastructure</span>
+              <h3>Open Fibre Data Standard</h3>
+              <p>Explore a demo map of fibre infrastructure and learn how the Open Fibre Data Standard helps organisations structure and share fibre-network data.</p>
+              <div class="partner-actions">
+                <a class="partner-link" href="https://ofds-demo.opentelecomdata.org/" target="_blank" rel="noopener noreferrer">Open demo map <span aria-hidden="true">&#8599;</span></a>
+                <a class="partner-link" href="https://standard.ofds.info/en/latest/" target="_blank" rel="noopener noreferrer">Read the standard <span aria-hidden="true">&#8599;</span></a>
+              </div>
             </article>
           </div>
         </section>
