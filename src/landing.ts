@@ -159,12 +159,15 @@ if (app) {
               <span class="partner-link">Open locnet.io <span aria-hidden="true">&#8599;</span></span>
             </a>
 
-            <a class="partner-card partner-card-active" href="https://meter.giga.global/" target="_blank" rel="noreferrer">
-              <span class="partner-index">02 / Connectivity monitoring</span>
-              <h3>Giga Meter</h3>
-              <p>Monitor school internet quality with automated speed tests, visualize connectivity performance over time, and contribute measurements that help guide infrastructure improvements.</p>
-              <span class="partner-link">Open Giga Meter <span aria-hidden="true">&#8599;</span></span>
-            </a>
+            <article class="partner-card partner-card-active">
+              <span class="partner-index">02 / School connectivity</span>
+              <h3>Giga Meter &amp; Giga Maps</h3>
+              <p>Monitor school internet quality with Giga Meter and explore school locations and connectivity through Giga Maps.</p>
+              <div class="partner-actions">
+                <a class="partner-link" href="https://meter.giga.global/" target="_blank" rel="noopener noreferrer">Open Giga Meter <span aria-hidden="true">&#8599;</span></a>
+                <a class="partner-link" href="https://maps.giga.global/map" target="_blank" rel="noopener noreferrer">Open Giga Maps <span aria-hidden="true">&#8599;</span></a>
+              </div>
+            </article>
 
             <article class="partner-card partner-card-active">
               <span class="partner-index">03 / Fibre infrastructure</span>
