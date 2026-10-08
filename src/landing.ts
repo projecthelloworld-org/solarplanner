@@ -145,10 +145,10 @@ if (app) {
         <section class="partners-band" id="partner-tools" aria-labelledby="partners-title">
           <div class="partners-heading">
             <div>
-              <p class="eyebrow">Open-source partner tools</p>
+              <p class="eyebrow">Partner tools</p>
               <h2 id="partners-title">Good tools grow through collaboration.</h2>
             </div>
-            <p>Useful open-source projects from organisations working on community connectivity, local infrastructure, and digital inclusion.</p>
+            <p>Useful tools and resources from organisations working on community connectivity, local infrastructure, and digital inclusion.</p>
           </div>
 
           <div class="partners-grid">
@@ -178,6 +178,12 @@ if (app) {
                 <a class="partner-link" href="https://standard.ofds.info/en/latest/" target="_blank" rel="noopener noreferrer">Read the standard <span aria-hidden="true">&#8599;</span></a>
               </div>
             </article>
+            <a class="partner-card partner-card-active" href="https://pulse.internetsociety.org/en/shutdowns/" target="_blank" rel="noopener noreferrer">
+              <span class="partner-index">04 / Internet shutdowns</span>
+              <h3>Internet Society Pulse</h3>
+              <p>Explore ongoing and historical Internet shutdowns, compare trends across countries, and review incident details and verification levels.</p>
+              <span class="partner-link">Explore shutdowns <span aria-hidden="true">&#8599;</span></span>
+            </a>
           </div>
         </section>
 
