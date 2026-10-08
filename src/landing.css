@@ -585,15 +585,6 @@ h1 {
   transform: translateY(-3px);
 }
 
-.partner-card-placeholder {
-  border-top-color: #d5d1ca;
-  color: #6f716f;
-}
-
-.partner-card-placeholder .partner-index {
-  color: #6f716f;
-}
-
 .partner-index {
   color: var(--peppermint);
   font-size: 0.74rem;

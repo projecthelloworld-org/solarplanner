@@ -184,11 +184,12 @@ if (app) {
               <p>Explore ongoing and historical Internet shutdowns, compare trends across countries, and review incident details and verification levels.</p>
               <span class="partner-link">Explore shutdowns <span aria-hidden="true">&#8599;</span></span>
             </a>
-            <article class="partner-card partner-card-placeholder">
-              <span class="partner-index">05 / Open slot</span>
-              <h3>Partner tool coming soon</h3>
-              <p>More practical tools for community connectivity and infrastructure will be added here.</p>
-            </article>
+            <a class="partner-card partner-card-active" href="https://ooni.org/" target="_blank" rel="noopener noreferrer">
+              <span class="partner-index">05 / Internet censorship</span>
+              <h3>OONI</h3>
+              <p>Explore open data on Internet censorship and discover tools for testing website and app blocking, network speed and performance.</p>
+              <span class="partner-link">Explore OONI <span aria-hidden="true">&#8599;</span></span>
+            </a>
           </div>
         </section>
 
