@@ -562,7 +562,7 @@ h1 {
 
 .partners-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 24px;
 }
 
@@ -583,6 +583,15 @@ h1 {
 .partner-card-active:hover {
   background: #f6eee4;
   transform: translateY(-3px);
+}
+
+.partner-card-placeholder {
+  border-top-color: #d5d1ca;
+  color: #6f716f;
+}
+
+.partner-card-placeholder .partner-index {
+  color: #6f716f;
 }
 
 .partner-index {
